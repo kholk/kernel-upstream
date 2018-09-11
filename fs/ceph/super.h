@@ -1124,15 +1124,6 @@ extern void ceph_readdir_cache_release(struct ceph_readdir_cache_control *ctl);
 
 /* ioctl.c */
 extern long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
-static inline long
-ceph_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-#ifdef CONFIG_COMPAT
-	return ceph_ioctl(file, cmd, (unsigned long)compat_ptr(arg));
-#else
-	return -ENOTTY;
-#endif
-}
 
 /* export.c */
 extern const struct export_operations ceph_export_ops;
