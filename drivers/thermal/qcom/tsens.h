@@ -320,7 +320,7 @@ int get_temp_common(struct tsens_priv *priv, int i, int *temp);
 extern const struct tsens_plat_data data_8960;
 
 /* TSENS v0.1 targets */
-extern const struct tsens_plat_data data_8916, data_8974;
+extern const struct tsens_plat_data data_8916, data_8974, data_8976;
 
 /* TSENS v1 targets */
 extern const struct tsens_plat_data data_tsens_v1;
