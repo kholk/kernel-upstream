@@ -1,0 +1,457 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2014 Sony Mobile Communications Inc.
+ * Copyright (c) 2016-2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ */
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "msm8956.dtsi"
+#include "pmi8950.dtsi"
+#include "pm8950.dtsi"
+#include "pm8004.dtsi"
+
+/ {
+	aliases {
+		serial0 = &blsp2_uart2;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	reserved-memory {
+		ramoops {
+			compatible = "removed-dma-pool", "ramoops";
+			no-map;
+			reg = <0 0x57f00000 0 0x00100000>;
+			record-size = <0x20000>;
+			console-size = <0x40000>;
+			ftrace-size = <0x20000>;
+			pmsg-size = <0x20000>;
+			ecc-size = <16>;
+			status = "ok";
+		};
+	};
+};
+
+&soc {
+	blsp2_uart2: serial@7af0000 {
+		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
+		reg = <0x7af0000 0x200>;
+		interrupts = <GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&gcc GCC_BLSP2_UART2_APPS_CLK>,
+			 <&gcc GCC_BLSP2_AHB_CLK>;
+		clock-names = "core", "iface";
+		dmas = <&blsp2_dma 1>, <&blsp2_dma 0>;
+		dma-names = "rx", "tx";
+		status = "okay";
+	};
+};
+
+&blsp_dma {
+	status = "ok";
+};
+
+&blsp2_dma {
+	status = "ok";
+};
+
+&blsp1_uart1 {
+	status = "disabled";
+};
+
+&blsp1_uart2 {
+	status = "disabled";
+};
+
+/* eMMC */
+&sdhc_1 {
+	status = "ok";
+};
+
+/* MicroSD card slot */
+&sdhc_2 {
+	status = "ok";
+};
+
+/* SDIO (internal) to BCM WiFi */
+&sdhc_3 {
+	status = "ok";
+	brcmf: brcmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <45 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "host-wake";
+	};
+};
+
+&blsp_i2c4 {
+	status = "ok";
+	/* TODO: Move tp_int_n_gpio here?? */
+
+	rmi4-i2c-dev@2c {
+		compatible = "syna,rmi4-i2c";
+		reg = <0x2c>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
+
+		/* TODO: Should we move them?
+		 * vdd-supply, vio-supply are supported in this driver.
+		 */
+		vdd-supply = <&panel_tvdd>;
+
+		syna,reset-delay-ms = <220>;
+		syna,startup-delay-ms = <220>;
+
+		rmi4-f01@1 {
+			reg = <0x1>;
+			syna,nosleep-mode = <1>;
+		};
+
+		rmi4-f12@12 {
+			reg = <0x12>;
+			syna,sensor-type = <1>;
+		};
+	};
+};
+
+&msm_gpio {
+	gpio-reserved-ranges = <0 4>;
+
+	blsp2_uart2_active: blsp2_uart2_active {
+		mux {
+			pins = "gpio20", "gpio21";
+			function = "blsp_uart6";
+		};
+		config {
+			pins = "gpio20", "gpio21";
+			drive-strength = <4>;
+			bias-disable;
+		};
+	};
+
+	blsp2_uart2_sleep: blsp2_uart2_sleep {
+		mux {
+			pins = "gpio20", "gpio21";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio20", "gpio21";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	disp_reset_n_gpio: disp_reset_n_gpio {
+		mux {
+			pins = "gpio25";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio25";
+			drive-strength = <2>;
+			output-high;
+		};
+	};
+
+	tp_reset_n_gpio: tp_reset_n_gpio {
+		mux {
+			pins = "gpio64";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio64";
+			drive-strength = <2>;
+		};
+	};
+
+	tp_int_n_gpio: tp_int_n_gpio {
+		mux {
+			pins = "gpio65";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio65";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};
+
+/* HACK!!!!!! */
+&gfx_vreg_corner {
+	vdd-gfx-supply = <&pm8004_s5>;
+
+	regulator-always-on;
+
+	power-domains = <&rpmpd MSM8956_VDDCX_AO>, <&rpmpd MSM8956_VDDCX_AO>;
+	power-domain-names = "mx", "cx";
+	qcom,mx-corner-map = <RPM_SMD_LEVEL_SVS>,
+				 <RPM_SMD_LEVEL_SVS>,
+				 <RPM_SMD_LEVEL_SVS>,
+				 <RPM_SMD_LEVEL_SVS>,
+				 <RPM_SMD_LEVEL_SVS_PLUS>,
+				 <RPM_SMD_LEVEL_NOM>,
+				 <RPM_SMD_LEVEL_NOM_PLUS>,
+				 <RPM_SMD_LEVEL_TURBO>,
+				 <RPM_SMD_LEVEL_TURBO>;
+};
+
+&mem_acc_gfx_vreg_corner {
+	regulator-always-on;
+};
+
+&adreno_gpu {
+	vdd-supply = <&gfx_vreg_corner>;
+};
+
+&venus {
+	status = "ok";
+};
+
+&camss {
+	status = "ok";
+};
+
+&pm8004_lsid5 {
+	status = "ok";
+};
+
+&pm8004_spmi_regulators {
+	vdd_s2-supply = <&vph_pwr>;
+	vdd_s5-supply = <&vph_pwr>;
+
+	/* Cluster 1 supply */
+	pm8004_s2: s2 {
+		/* hack this on until the CPU driver is in */
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-name = "vdd_apc1";
+		/* regulator-min-microvolt = <500000>; */ // Original
+		/* Set .95V to prevent unstabilities during early dev */
+		regulator-min-microvolt = <950000>;
+		regulator-max-microvolt = <1165000>;
+	};
+
+	pm8004_s5: s5 {
+		/* hack this on until the gpu driver is ready for it */
+		//regulator-always-on;
+
+		regulator-name = "vdd_gfx";
+		regulator-min-microvolt = <950000>;
+		regulator-max-microvolt = <1165000>;
+		regulator-enable-ramp-delay = <500>;
+	};
+};
+
+&pm8950_spmi_regulators {
+	vdd_s5-supply = <&vph_pwr>;
+
+	/* Cluster 0 supply */
+	pm8950_spmi_s5: s5 {
+		/* hack this on until the CPU driver is in */
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-name = "vdd_apc0";
+		/* regulator-min-microvolt = <790000>; */
+		/* Set .95V to prevent unstabilities during early dev */
+		regulator-min-microvolt = <950000>;
+		regulator-max-microvolt = <1165000>;
+	};
+};
+
+&smd_rpm_regulators {
+	vdd_s1-supply = <&vph_pwr>;
+	vdd_s2-supply = <&vph_pwr>;
+	vdd_s3-supply = <&vph_pwr>;
+	vdd_s4-supply = <&vph_pwr>;
+	vdd_s5-supply = <&vph_pwr>;
+	vdd_s6-supply = <&vph_pwr>;
+        vdd_l1_l19-supply = <&pm8950_s3>;
+        vdd_l2_l23-supply = <&pm8950_s3>;
+	vdd_l3-supply = <&pm8950_s3>;
+        vdd_l4_l5_l6_l7_l16-supply = <&pm8950_s4>;
+        vdd_l8_l11_l12_l17_l22-supply = <&vph_pwr>;
+	vdd_l20-supply = <&pm8950_s4>;
+	vdd_l21-supply = <&pm8950_s4>;
+
+	s1 {
+		regulator-min-microvolt = <1000000>;
+		regulator-max-microvolt = <1162500>;
+		qcom,init-voltage = <1000000>;
+		status = "okay";
+	};
+
+	s3 {
+		regulator-min-microvolt = <1325000>;
+		regulator-max-microvolt = <1325000>;
+		qcom,init-voltage = <1325000>;
+		regulator-always-on;
+		status = "okay";
+	};
+
+	s4 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		qcom,init-voltage = <1800000>;
+		regulator-always-on;
+		status = "okay";
+	};
+
+	l1 {
+		regulator-min-microvolt = <900000>;
+		regulator-max-microvolt = <1100000>;
+		qcom,init-voltage = <1000000>;
+		status = "okay";
+	};
+
+	l2 {
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		qcom,init-voltage = <1200000>;
+		status = "okay";
+	};
+
+	l3 {
+		regulator-min-microvolt = <1000000>;
+		regulator-max-microvolt = <1200000>;
+		qcom,init-voltage = <1000000>;
+		status = "okay";
+	};
+
+	l5 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l6 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l7 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l8 {
+		regulator-min-microvolt = <2900000>;
+		regulator-max-microvolt = <2900000>;
+		qcom,init-voltage = <2900000>;
+		status = "okay";
+	};
+
+	l9 {
+		regulator-min-microvolt = <2000000>;
+		regulator-max-microvolt = <2400000>;
+		qcom,init-voltage = <2200000>;
+		status = "okay";
+	};
+
+	l10 {
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2900000>;
+		qcom,init-voltage = <2700000>;
+		status = "okay";
+	};
+
+	l11 {
+		regulator-min-microvolt = <2950000>;
+		regulator-max-microvolt = <2950000>;
+		qcom,init-voltage = <2950000>;
+		status = "okay";
+	};
+
+	l12 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <2950000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l13 {
+		regulator-min-microvolt = <3075000>;
+		regulator-max-microvolt = <3075000>;
+		qcom,init-voltage = <3075000>;
+		status = "okay";
+	};
+
+	l14 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l15 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l16 {
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		qcom,init-voltage = <1800000>;
+		status = "okay";
+	};
+
+	l17 {
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2900000>;
+		qcom,init-voltage = <2700000>;
+		status = "okay";
+	};
+
+	l19 {
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1350000>;
+		qcom,init-voltage = <1200000>;
+		status = "okay";
+	};
+
+	l22 {
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
+		qcom,init-voltage = <3000000>;
+		status = "okay";
+	};
+
+	l23 {
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		qcom,init-voltage = <1200000>;
+		status = "okay";
+	};
+};
+
+&pm8950_gpios {
+	pm8950_gpio_1: cdc_pm_mclk {
+		cdc_pm {
+			pins = "gpio1";
+			function = "func1"; /* SF1 */
+			output-low;
+			bias-disable;
+			qcom,drive-strength = <2>;
+			power-source = <2>; /* VIN 2 */
+		};
+	};
+
+	pm8950_gpio_7: wcd_eldo_en {
+		wcd_eldo {
+			pins = "gpio7";
+			function = "gpio";
+			output-low;
+			bias-disable;
+			power-source = <0>; /* VPH_PWR */
+		};
+	};
+};

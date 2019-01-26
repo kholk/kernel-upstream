@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2014 Sony Mobile Communications Inc.
+ * Copyright (c) 2016-2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ */
+
+/dts-v1/;
+
+#include "msm8956-sony-xperia-loire.dtsi"
+
+/ {
+	model = "SoMC Loire Kugo-ROW";
+	compatible = "somc,kugo-row", "qcom,msm8956";
+
+	qcom,board-id = <8 0>;
+};
+
+&blsp_i2c6 {
+	status = "okay";
+	fusb301@25 {
+		status = "okay";
+		compatible = "fusb301";
+		reg = <0x25>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <107 IRQ_TYPE_EDGE_BOTH>,
+			     <131 IRQ_TYPE_EDGE_FALLING>;
+		fusb301,cbl_sns-enabled;
+		fusb301,cbl_sns-gpio = <&msm_gpio 116 0x00>;
+		fusb301,int-gpio = <&msm_gpio 131 0x00>;
+		fusb301,cbl_det-gpio = <&msm_gpio 107 0x00>;
+		fusb301,use-try-snk-emulation;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_cable_det_n_gpio &usb_cable_sense_en_gpio
+			     &usb_cc_int_n_gpio>;
+	};
+};
+
+&blsp_i2c8 {
+	status = "okay";
+};
+
+&pm8950_l1 {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1300000>;
+	qcom,init-voltage = <1200000>;
+};
+
+&usb_hs_phy {
+	status = "ok";
+	qcom,init-seq = /bits/ 8 <0x0 0x74 0x1 0x68 0x2 0x3f 0x3 0x33>;
+};
+
+&dsi0 {
+	jdi_panel0: h455tax01-panel@0 {
+		compatible = "jdi,syn-incell-h455tax01";
+		reg = <0>;
+		status = "okay";
+		disp-te-gpio = <&msm_gpio 24 0>;
+
+		vddio-supply = <&pm8950_l6>; /* 1.8V */
+		avdd-supply = <&pm8950_l23>; /* 1.2V */
+		tvdd-supply = <&pm8950_l22>; /* 3.0V */
+		tvddio-supply = <&panel_tvdd>;
+
+		preset-gpio = <&msm_gpio 25 0>;
+		treset-gpio = <&msm_gpio 64 0>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&mdss_te_active &disp_reset_n_gpio
+			     &tp_reset_n_gpio &tp_int_n_gpio>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				panel_in: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+		};
+	};
+};
+
+/* Display output through DSI0 */
+&dsi0_out {
+	remote-endpoint = <&panel_in>;
+	data-lanes = <0 1 2 3>;
+};
+
+/* Machine specific pins override */
+&msm_gpio {
+	usb_cable_det_n_gpio: usb_cable_det_n {
+		mux {
+			pins = "gpio107";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio107";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	usb_cable_sense_en_gpio: usb_cable_sense_en {
+		mux {
+			pins = "gpio116";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio116";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	usb_cc_int_n_gpio: usb_cc_int_n {
+		mux {
+			pins = "gpio131";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio131";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};

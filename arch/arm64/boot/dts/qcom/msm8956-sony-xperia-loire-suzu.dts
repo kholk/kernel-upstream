@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2014 Sony Mobile Communications Inc.
+ * Copyright (c) 2016-2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ */
+
+/dts-v1/;
+
+#include "msm8956-sony-xperia-loire.dtsi"
+
+/ {
+	model = "SoMC Loire Suzu-ROW";
+	compatible = "somc,suzu-row", "qcom,msm8956";
+
+	qcom,board-id = <8 0>;
+};
+
+&blsp_i2c8 {
+	status = "okay";
+};
+
+&usb_hs_phy {
+	qcom,init-seq = /bits/ 8 <0x0 0x74 0x1 0x6f 0x2 0x3f 0x3 0x33>;
+};
+
+&dsi0 {
+	lgd_panel0: lgd-panel@0 {
+		compatible = "lgd,syn-incell-fhd-ips-lcd";
+		reg = <0>;
+		status = "okay";
+		disp-te-gpio = <&msm_gpio 24 0>;
+
+		vddio-supply = <&pm8950_l6>; /* 1.8V */
+		avdd-supply = <&pm8950_l23>; /* 1.2V */
+		// No tvdd for full in-cell.
+		// tvdd-supply = <&pm8950_l22>; /* 3.0V */
+		tvddio-supply = <&panel_tvdd>;
+		// No pvddio-supply for the Suzu panel (Dora has it though).
+
+		preset-gpio = <&msm_gpio 25 0>;
+		treset-gpio = <&msm_gpio 64 0>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&mdss_te_active &disp_reset_n_gpio
+			     &tp_reset_n_gpio &tp_int_n_gpio>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				panel_in: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+		};
+	};
+};
+
+/* Display output through DSI0 */
+&dsi0_out {
+	remote-endpoint = <&panel_in>;
+	data-lanes = <0 1 2 3>;
+};
