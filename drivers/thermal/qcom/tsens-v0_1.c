@@ -317,7 +317,7 @@ static int calibrate_8974(struct tsens_priv *priv)
 	return 0;
 }
 
-/* v0.1: 8916, 8974 */
+/* v0.1: 8916, 8974, 8976 */
 
 static const struct tsens_features tsens_v0_1_feat = {
 	.ver_major	= VER_0_1,
