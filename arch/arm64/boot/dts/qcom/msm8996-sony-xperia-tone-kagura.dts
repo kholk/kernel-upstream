@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2016 Sony Mobile Communications Inc.
+ * Copyright (c) 2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ */
+
+/dts-v1/;
+
+#include "msm8996-sony-xperia-tone.dtsi"
+
+/ {
+	model = "SoMC Tone Kagura-ROW";
+	compatible = "somc,kagura-row", "qcom,msm8996";
+
+	qcom,board-id = <8 0>;
+
+	rpm-glink {
+		rpm_requests {
+			pm8994-regulators {
+				l19 {
+					regulator-min-microvolt = <3000000>;
+					regulator-max-microvolt = <3000000>;
+				};
+			};
+		};
+	};
+};
+
+&blsp1_i2c2 {
+	vl53l0x@29 {
+		compatible = "st,vl53l0x";
+		reg = <0x29>;
+	};
+};
+
+/* Pins */
+&msmgpio {
+	usb_cable_sense_en_gpio: usb_cable_sense_en {
+		mux {
+			pins = "gpio25";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio25";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	usb_cc_int_n_gpio: usb_cc_int_n {
+		mux {
+			pins = "gpio59";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio59";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	tof_int_gpio_act: tof_int_active {
+		mux {
+			pins = "gpio85";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	tof_int_gpio_sleep: tof_int_sleep {
+		mux {
+			pins = "gpio85";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	rgbcir_int_gpio_act: rgbcir_int_active {
+		mux {
+			pins = "gpio86";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	rgbcir_int_gpio_sleep: rgbcir_int_sleep {
+		mux {
+			pins = "gpio86";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	usb_cable_det_n_gpio: usb_cable_det_n {
+		mux {
+			pins = "gpio131";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio131";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};
