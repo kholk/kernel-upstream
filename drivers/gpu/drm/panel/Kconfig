@@ -306,5 +306,17 @@ config DRM_PANEL_SOMC_JDI_SYN_H455TAX01
 	  per pixel.
 	  It provides a single MIPI DSI interface to the host.
 
+config DRM_PANEL_SOMC_LGD_FHD_IPS
+	tristate "LG Display XXXXXXXXX FullHD CMD panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for the LG Display
+	  XXXXXXXXX IPS-LCD DSI command-mode panel, as found in some
+	  Sony Xperia X and Xperia X Performance smartphones.
+	  This panel has a 1920x1080 resolution and uses 24 bit RGB
+	  per pixel.
+	  It provides a single MIPI DSI interface to the host.
 
 endmenu
