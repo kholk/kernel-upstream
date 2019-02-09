@@ -22,3 +22,7 @@ obj-$(CONFIG_DRM_PANEL_SHARP_LQ101R1SX01) += panel-sharp-lq101r1sx01.o
 obj-$(CONFIG_DRM_PANEL_SHARP_LS043T1LE01) += panel-sharp-ls043t1le01.o
 obj-$(CONFIG_DRM_PANEL_SITRONIX_ST7789V) += panel-sitronix-st7789v.o
 obj-$(CONFIG_DRM_PANEL_TRULY_NT35597_WQXGA) += panel-truly-nt35597.o
+
+# TODO: WHAT IS THE PANEL MODEL???
+obj-$(CONFIG_DRM_PANEL_SOMC_LGD_FHD_IPS) += panel-somc-lgd-fhd-ips.o
+
