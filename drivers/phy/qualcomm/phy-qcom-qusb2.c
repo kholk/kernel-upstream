@@ -677,7 +677,7 @@ static int qusb2_phy_init(struct phy *phy)
 	if (!(val & cfg->mask_core_ready)) {
 		dev_err(&phy->dev,
 			"QUSB2PHY pll lock failed: status reg = %x\n", val);
-		ret = -EBUSY;
+		ret = -EPROBE_DEFER;
 		goto disable_ref_clk;
 	}
 	qphy->phy_initialized = true;
