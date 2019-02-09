@@ -18,7 +18,7 @@
 	};
 
 	chosen {
-		stdout-path = "serial0";
+		stdout-path = "serial0:115200n8";
 	};
 
 	reserved-memory {
@@ -31,6 +31,13 @@
 			ftrace-size = <0x20000>;
 			pmsg-size = <0x20000>;
 			ecc-size = <16>;
+			status = "ok";
+		};
+
+		zap_shader_region: gpu@8f200000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x91700000 0x0 0xa00000>;
+			no-map;
 			status = "ok";
 		};
 	};
@@ -142,6 +149,7 @@
 				l24 {
 					regulator-min-microvolt = <3075000>;
 					regulator-max-microvolt = <3075000>;
+					regulator-allow-set-load;
 				};
 				l25 {
 					regulator-min-microvolt = <1200000>;
@@ -152,7 +160,7 @@
 					regulator-min-microvolt = <1000000>;
 					regulator-max-microvolt = <1200000>;
 				};
-				l28 {
+				l28 { /* This should be 1.0V for USB, 0.925 for DSI :\ */
 					regulator-min-microvolt = <925000>;
 					regulator-max-microvolt = <925000>;
 					regulator-allow-set-load;
@@ -170,8 +178,16 @@
 	};
 };
 
+&gcc {
+	status = "ok";
+};
+
+&rpmcc {
+	status = "ok";
+};
+
 &soc {
-	sdhc1: sdhci@74a4900 {
+	sdhc1: sdhci@7464900 {
 		compatible = "qcom,sdhci-msm-v4";
 		reg = <0x7464900 0x500>, <0x7464000 0x800>;
 		reg-names = "hc_mem", "core_mem";
@@ -188,7 +204,7 @@
 		mmc-hs400-1_8v;
 		bus-width = <8>;
 		non-removable;
-		status = "ok";
+		status = "disabled";
 	};
 
 	sdhci@74a4900 {
@@ -200,7 +216,7 @@
 		cd-gpios = <&msmgpio 40 GPIO_ACTIVE_LOW>;
 		vmmc-supply = <&pm8994_l21>;
 		vqmmc-supply = <&pm8994_l13>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	blsp2_i2c11: i2c@75b9000 {
@@ -215,6 +231,8 @@
 		pinctrl-1 = <&blsp2_i2c11_sleep>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		clock-frequency = <355000>;
 		status = "ok";
 	};
 
@@ -230,6 +248,8 @@
 		pinctrl-1 = <&blsp2_i2c12_sleep>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		clock-frequency = <355000>;
 		status = "ok";
 	};
 
@@ -291,16 +311,55 @@
 	};
 
 	phy@7412000 {
-		status = "okay";
+		status = "disabled";
+	};
+
+	usb3_id: usb3-id {
+		compatible = "linux,extcon-usb-gpio";
+		id-gpio = <&msmgpio 24 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_detect_gpio>;
 	};
 
 	usb@6af8800 {
 		status = "okay";
+		extcon = <&usb3_id>;
+
+		clock-names = "cfg_noc", "core", "iface", "mock_utmi",
+				"sleep", "ahb2phy";
+		resets = <&gcc GCC_USB_30_BCR>,
+			 <&gcc GCC_USB_PHY_CFG_AHB2PHY_BCR>;
+		reset-names = "core_reset", "ahb2phy_reset";
+
+		interrupts = <GIC_SPI 347 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hs_phy_irq", "ss_phy_irq";
 
 		dwc3@6a00000 {
-			dr_mode = "peripheral";
+			extcon = <&usb3_id>;
+			dr_mode = "otg";
 			maximum-speed = "high-speed";
+			snps,has-lpm-erratum;
+			snps,is-utmi-l1-suspend;
+			snps,hird-threshold = /bits/ 8 <0x0>;
+			phys = <&hsusb_phy1>; //, <&ssusb_phy_0>;
+			phy-names = "usb2-phy"; //, "usb3-phy";
 		};
+	};
+
+	wlan_en: wlan-en-1-8v {
+		pinctrl-names = "default";
+		pinctrl-0 = <&wl_reg_on_gpio>;
+		compatible = "regulator-fixed";
+		regulator-name = "wlan-en-regulator";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+
+		gpio = <&msmgpio 84 GPIO_ACTIVE_HIGH>;
+
+		/* WLAN card specific delay */
+		startup-delay-us = <70000>;
+		enable-active-high;
 	};
 
 	agnoc@0 {
@@ -308,6 +367,7 @@
 			status = "okay";
 			perst-gpio = <&msmgpio 35 GPIO_ACTIVE_LOW>;
 			wake-gpio = <&msmgpio 37 GPIO_ACTIVE_LOW>;
+			vddpe-3v3-supply = <&wlan_en>;
 		};
 
 		pcie@608000 {
@@ -321,6 +381,282 @@
 			wake-gpio = <&msmgpio 116 GPIO_ACTIVE_LOW>;
 		};
 	};
+
+	adreno_smmu: arm,smmu@b40000 {
+		compatible = "qcom,msm8996-smmu-v2", "qcom,smmu-v2";
+		reg = <0xb40000 0x10000>;
+
+		#global-interrupts = <1>;
+		interrupts = <GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>;
+		#iommu-cells = <1>;
+
+/*
+		clocks = <&mmcc GPU_AHB_CLK>,
+			<&gcc GCC_MMSS_BIMC_GFX_CLK>;
+		clock-names = "bus", "iface";
+*/
+		clocks = <&mmcc MMSS_MMAGIC_AHB_CLK>,
+			<&mmcc MMSS_MMAGIC_CFG_AHB_CLK>,
+			<&mmcc GPU_AHB_CLK>,
+			<&gcc GCC_MMSS_BIMC_GFX_CLK>,
+			<&gcc GCC_BIMC_GFX_CLK>;
+		clock-names = "mmagic_ahb_clk", "mmagic_cfg_ahb_clk", "gpu_ahb_clk",
+			"gcc_mmss_bimc_gfx_clk", "gcc_bimc_gfx_clk";
+
+		power-domains = <&mmcc GPU_GDSC>;
+
+		status = "ok";
+	};
+
+	mdp_smmu: arm,smmu@d00000 {
+		compatible = "qcom,msm8996-smmu-v2", "qcom,smmu-v2";
+		reg = <0xd00000 0x10000>;
+
+		#global-interrupts = <1>;
+		interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>;
+		#iommu-cells = <1>;
+
+		power-domains = <&mmcc MDSS_GDSC>;
+/*
+		clocks = <&mmcc SMMU_MDP_AHB_CLK>,
+			 <&mmcc SMMU_MDP_AXI_CLK>;
+		clock-names = "iface", "bus";
+*/
+		clocks = <&mmcc MMSS_MMAGIC_AHB_CLK>,
+			<&mmcc MMSS_MMAGIC_CFG_AHB_CLK>,
+			<&mmcc SMMU_MDP_AHB_CLK>,
+			<&mmcc SMMU_MDP_AXI_CLK>,
+			<&mmcc MMAGIC_MDSS_AXI_CLK>;
+		clock-names = "mmagic_ahb_clk", "mmagic_cfg_ahb_clk",
+			"mdp_ahb_clk", "mdp_axi_clk",
+			"mmagic_mdss_axi_clk";
+
+		status = "ok";
+	};
+
+	gpu@b00000 {
+		compatible = "qcom,adreno-530.2", "qcom,adreno";
+		#stream-id-cells = <16>;
+
+		reg = <0xb00000 0x3f000>;
+		reg-names = "kgsl_3d0_reg_memory";
+
+		interrupts = <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "kgsl_3d0_irq";
+
+		clocks = <&mmcc GPU_GX_GFX3D_CLK>,
+			<&mmcc GPU_AHB_CLK>,
+			<&mmcc GPU_GX_RBBMTIMER_CLK>,
+			<&gcc GCC_BIMC_GFX_CLK>,
+			<&gcc GCC_MMSS_BIMC_GFX_CLK>;
+
+		clock-names = "core",
+			"iface",
+			"rbbmtimer",
+			"mem",
+			"mem_iface";
+
+		power-domains = <&mmcc GPU_GDSC>;
+		vdd-supply = <&pmi8994_s2>;
+		iommus = <&adreno_smmu 0>;
+
+		qcom,gpu-quirk-two-pass-use-wfi;
+		qcom,gpu-quirk-fault-detect-mask;
+
+		/* This is a safe speed for bring up in all bin levels.
+		 * This isn't the fastest the chip can go, but we can
+		 * get there eventually */
+		qcom,gpu-pwrlevels {
+			compatible = "qcom,gpu-pwrlevels";
+			qcom,gpu-pwrlevel@0 {
+				qcom,gpu-freq = <510000000>;
+			};
+			qcom,gpu-pwrlevel@1 {
+				qcom,gpu-freq = <27000000>;
+			};
+		};
+
+		zap-shader {
+			memory-region = <&zap_shader_region>;
+		};
+	};
+
+	mdss: mdss@900000 {
+		compatible = "qcom,mdss";
+
+		reg = <0x900000 0x1000>,
+		      <0x9b0000 0x1040>,
+		      <0x9b8000 0x1040>;
+		reg-names = "mdss_phys",
+			    "vbif_phys",
+			    "vbif_nrt_phys";
+
+		power-domains = <&mmcc MDSS_GDSC>;
+		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
+
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		clocks = <&mmcc MDSS_AHB_CLK>,
+			 <&mmcc MDSS_AXI_CLK>,
+			 <&mmcc MDSS_VSYNC_CLK>;
+		clock-names = "iface", "bus", "vsync";
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		mdp: mdp@901000 {
+			compatible = "qcom,mdp5";
+			reg = <0x901000 0x90000>;
+			reg-names = "mdp_phys";
+
+			interrupt-parent = <&mdss>;
+			interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;
+
+			clocks = <&mmcc MDSS_AHB_CLK>,
+				 <&mmcc MDSS_AXI_CLK>,
+				 <&mmcc MDSS_MDP_CLK>,
+				 <&mmcc SMMU_MDP_AXI_CLK>,
+				 <&mmcc MDSS_VSYNC_CLK>;
+			clock-names = "iface",
+				      "bus",
+				      "core",
+				      "iommu",
+				      "vsync";
+
+			iommus = <&mdp_smmu 0>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					mdp5_intf1_out: endpoint {
+						remote-endpoint = <&dsi0_in>;
+					};
+				};
+			};
+		};
+
+		dsi0: dsi@994000 {
+			compatible = "qcom,mdss-dsi-ctrl";
+			reg = <0x994000 0x400>;
+			reg-names = "dsi_ctrl";
+			qcom,dsi-host-index = <0>;
+
+			interrupt-parent = <&mdss>;
+			interrupts = <4 0>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			clocks = <&mmcc MDSS_MDP_CLK>,
+				 <&mmcc MDSS_AHB_CLK>,
+				 <&mmcc MDSS_AXI_CLK>,
+				 <&mmcc MMSS_MISC_AHB_CLK>,
+				 <&mmcc MDSS_BYTE0_CLK>,
+				 <&mmcc MDSS_PCLK0_CLK>,
+				 <&mmcc MDSS_ESC0_CLK>;
+			clock-names = "mdp_core",
+				      "iface",
+				      "bus",
+				      "core_mmss",
+				      "byte",
+				      "pixel",
+				      "core";
+
+			assigned-clocks =
+					<&mmcc BYTE0_CLK_SRC>,
+					<&mmcc PCLK0_CLK_SRC>;
+			assigned-clock-parents =
+					<&dsi_phy0 0>,
+					<&dsi_phy0 1>;
+
+			vdda-supply = <&pm8994_l2>;
+			vcca-supply = <&pm8994_l28>;
+
+			phys = <&dsi_phy0>;
+			phy-names = "dsi-phy";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dsi0_in: endpoint {
+						remote-endpoint = <&mdp5_intf1_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dsi0_out: endpoint {
+						remote-endpoint = <&panel_in>;
+						data-lanes = <0 1 2 3>;
+					};
+				};
+			};
+
+			lgd_panel0: lgd-panel@0 {
+				compatible = "lgd,syn-incell-fhd-ips-lcd";
+				reg = <0>;
+				status = "okay";
+				disp-te-gpio = <&msmgpio 10 0>;
+
+				vddio-supply = <&pm8994_s4>;
+				avdd-supply = <&pm8994_l22>;
+
+				pvddio-gpio = <&msmgpio 51 GPIO_ACTIVE_HIGH>;
+				preset-gpio = <&msmgpio 8 GPIO_ACTIVE_HIGH>;
+				tvddio-gpio = <&msmgpio 50 GPIO_ACTIVE_HIGH>;
+				treset-gpio = <&msmgpio 89 GPIO_ACTIVE_HIGH>;
+
+				pinctrl-names = "default";
+				pinctrl-0 =
+					<&mdp_vsync_p_gpio &disp_reset_n_gpio
+					&tp_vddio_en_gpio &lcd_vddio_en_gpio
+					&ts_reset_n_gpio>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						panel_in: endpoint {
+							remote-endpoint = <&dsi0_out>;
+						};
+					};
+				};
+			};
+		};
+
+		dsi_phy0: dsi-phy@994800 {
+			compatible = "qcom,dsi-phy-14nm";
+			reg = <0x994800 0x188>,
+			      <0x994400 0x100>,
+			      <0x994500 0x300>;
+			reg-names = "dsi_pll",
+				    "dsi_phy",
+				    "dsi_phy_lane";
+
+			#clock-cells = <1>;
+			#phy-cells = <0>;
+
+			power-domains = <&mmcc MDSS_GDSC>;
+			vcca-supply = <&pm8994_l28>;
+
+			clocks = <&mmcc MDSS_AHB_CLK>;
+			clock-names = "iface";
+		};
+	};
+
 };
 
 &intc {
@@ -331,11 +667,19 @@
 	status = "disabled";
 };
 
-&blsp2_uart1 {
+&vfe_smmu {
 	status = "ok";
 };
 
+&blsp2_uart1 {
+	status = "ok";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&blsp2_uart1_2pins_default>;
+	pinctrl-1 = <&blsp2_uart1_2pins_sleep>;
+};
+
 &blsp1_i2c2 {
+	clock-frequency = <355000>;
 	status = "ok";
 };
 
@@ -366,6 +710,23 @@
 
 			gpio-controller;
 			#gpio-cells = <2>;
+		};
+	};
+
+	pmic@3 {
+		regulators {
+			compatible = "qcom,pmi8994-regulators";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* GPU GX GDSC Supply */
+			pmi8994_s2: s2@1700 {
+				reg = <0x1700 0x100>;
+				status = "ok";
+				regulator-min-microvolt = <400000>;
+				regulator-max-microvolt = <1015000>;
+				regulator-always-on;
+			};
 		};
 	};
 };
@@ -417,6 +778,32 @@
 		};
 		pinconf {
 			pins = "gpio87", "gpio88";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	disp_reset_n_gpio: disp_reset_n {
+		pinmux {
+			pins = "gpio8";
+			function = "gpio";
+		};
+
+		pinconf {
+			pins = "gpio8";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	mdp_vsync_p_gpio: mdp_vsync_p {
+		pinmux {
+			pins = "gpio10";
+			function = "mdp_vsync";
+		};
+
+		pinconf {
+			pins = "gpio10";
 			drive-strength = <2>;
 			bias-disable;
 		};
@@ -576,6 +963,34 @@
 			pins = "gpio41", "gpio42", "gpio43", "gpio44";
 			drive-strength = <2>;
 			bias-disable;
+		};
+	};
+
+	tp_vddio_en_gpio: tp_vddio_en {
+		pinmux {
+			pins = "gpio50";
+			function = "gpio";
+		};
+
+		pinconf {
+			pins = "gpio50";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	lcd_vddio_en_gpio: lcd_vddio_en {
+		pinmux {
+			pins = "gpio51";
+			function = "gpio";
+		};
+
+		pinconf {
+			pins = "gpio51";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
 		};
 	};
 
