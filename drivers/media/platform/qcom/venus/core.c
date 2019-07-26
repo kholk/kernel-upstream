@@ -426,6 +426,39 @@ static const struct venus_resources msm8916_res = {
 	.fwname = "qcom/venus-1.8/venus.mdt",
 };
 
+static const struct freq_tbl msm8956_freq_table[] = {
+	{  979200, 490000000 },	/* 4k UHD @ 30 */
+	{  734400, 360000000 },	/* 1080p @ 90 */
+	{  489600, 466000000 },	/* 1080p @ 60 */
+	{  432000, 400000000 },	/* 720p @ 120 */
+	{  244800, 228571428 },	/* 1080p @ 30 */
+	{  216000, 228571428 },	/* 720p @ 60 */
+	{  108000, 100000000 },	/* 720p @ 30 */
+	{   36000,  80000000 },	/* 480p @ 30 */
+};
+
+static const struct reg_val msm8956_reg_preset[] = {
+	{ 0xE0020, 0x05555556 },
+	{ 0xE0024, 0x05555556 },
+	{ 0x80124, 0x00000003 },
+};
+
+static const struct venus_resources msm8956_res = {
+	.freq_tbl = msm8956_freq_table,
+	.freq_tbl_size = ARRAY_SIZE(msm8956_freq_table),
+	.reg_tbl = msm8956_reg_preset,
+	.reg_tbl_size = ARRAY_SIZE(msm8956_reg_preset),
+	.clks = { "core", "iface", "bus", "core0" },
+	.clks_num = 4,
+	.max_load = 1011840, /* 3840x2176@31 */
+	.hfi_version = HFI_VERSION_3XX,
+	.vmem_id = VIDC_RESOURCE_NONE,
+	.vmem_size = 0,
+	.vmem_addr = 0,
+	.dma_mask = 0xddc00000 - 1,
+	.fwname = "qcom/venus-4.1/venus.mdt",
+};
+
 static const struct freq_tbl msm8996_freq_table[] = {
 	{ 1944000, 490000000 },	/* 4k UHD @ 60 */
 	{  972000, 320000000 },	/* 4k UHD @ 30 */
@@ -480,6 +513,7 @@ static const struct venus_resources sdm845_res = {
 
 static const struct of_device_id venus_dt_match[] = {
 	{ .compatible = "qcom,msm8916-venus", .data = &msm8916_res, },
+	{ .compatible = "qcom,msm8956-venus", .data = &msm8956_res, },
 	{ .compatible = "qcom,msm8996-venus", .data = &msm8996_res, },
 	{ .compatible = "qcom,sdm845-venus", .data = &sdm845_res, },
 	{ }
