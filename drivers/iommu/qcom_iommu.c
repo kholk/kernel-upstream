@@ -54,7 +54,7 @@ struct qcom_iommu_ctx {
 	struct device		*dev;
 	void __iomem		*base;
 	bool			 secure_init;
-	u8			 asid;      /* asid and ctx bank # are 1:1 */
+	u8			 asid;
 	struct iommu_domain	*domain;
 };
 
@@ -665,6 +665,11 @@ free_mem:
 static int get_asid(const struct device_node *np)
 {
 	u32 reg;
+	u32 asid;
+
+	/* On some SoCs ASID mapping is not 1:1 with ctx address */
+	if (!of_property_read_u32(np, "qcom,ctx-asid", &asid))
+		return asid;
 
 	/* read the "reg" property directly to get the relative address
 	 * of the context bank, and calculate the asid from that:
@@ -777,8 +782,9 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret, sz, max_asid = 0;
 
-	/* find the max asid (which is 1:1 to ctx bank idx), so we know how
-	 * many child ctx devices we have:
+	/* find the max asid (which usually is 1:1 to ctx bank idx, but anyway
+	 * never bigger than the number of ctx bank idx), so we know how many
+	 * child ctx devices we have:
 	 */
 	for_each_child_of_node(dev->of_node, child)
 		max_asid = max(max_asid, get_asid(child));
