@@ -26,14 +26,16 @@
 
 #define MSM_CSID_NAME "msm_csid"
 
+#define CAMSS_CSID_IS_3_5(v)		((v) == CAMSS_8x96)
+
 #define CAMSS_CSID_HW_VERSION		0x0
 #define CAMSS_CSID_CORE_CTRL_0		0x004
 #define CAMSS_CSID_CORE_CTRL_1		0x008
-#define CAMSS_CSID_RST_CMD(v)		((v) == CAMSS_8x16 ? 0x00c : 0x010)
+#define CAMSS_CSID_RST_CMD(v)		(CAMSS_CSID_IS_3_5(v) ? 0x010 : 0x00c)
 #define CAMSS_CSID_CID_LUT_VC_n(v, n)	\
-			(((v) == CAMSS_8x16 ? 0x010 : 0x014) + 0x4 * (n))
+			((CAMSS_CSID_IS_3_5(v) ? 0x014 : 0x010) + 0x4 * (n))
 #define CAMSS_CSID_CID_n_CFG(v, n)	\
-			(((v) == CAMSS_8x16 ? 0x020 : 0x024) + 0x4 * (n))
+			((CAMSS_CSID_IS_3_5(v) ? 0x024 : 0x020) + 0x4 * (n))
 #define CAMSS_CSID_CID_n_CFG_ISPIF_EN	BIT(0)
 #define CAMSS_CSID_CID_n_CFG_RDI_EN	BIT(1)
 #define CAMSS_CSID_CID_n_CFG_DECODE_FORMAT_SHIFT	4
@@ -43,21 +45,21 @@
 #define CAMSS_CSID_CID_n_CFG_PLAIN_ALIGNMENT_MSB	(1 << 9)
 #define CAMSS_CSID_CID_n_CFG_RDI_MODE_RAW_DUMP		(0 << 10)
 #define CAMSS_CSID_CID_n_CFG_RDI_MODE_PLAIN_PACKING	(1 << 10)
-#define CAMSS_CSID_IRQ_CLEAR_CMD(v)	((v) == CAMSS_8x16 ? 0x060 : 0x064)
-#define CAMSS_CSID_IRQ_MASK(v)		((v) == CAMSS_8x16 ? 0x064 : 0x068)
-#define CAMSS_CSID_IRQ_STATUS(v)	((v) == CAMSS_8x16 ? 0x068 : 0x06c)
-#define CAMSS_CSID_TG_CTRL(v)		((v) == CAMSS_8x16 ? 0x0a0 : 0x0a8)
+#define CAMSS_CSID_IRQ_CLEAR_CMD(v)	(CAMSS_CSID_IS_3_5(v) ? 0x064 : 0x060)
+#define CAMSS_CSID_IRQ_MASK(v)		(CAMSS_CSID_IS_3_5(v) ? 0x068 : 0x064)
+#define CAMSS_CSID_IRQ_STATUS(v)	(CAMSS_CSID_IS_3_5(v) ? 0x06c : 0x068)
+#define CAMSS_CSID_TG_CTRL(v)		(CAMSS_CSID_IS_3_5(v) ? 0x0a8 : 0x0a0)
 #define CAMSS_CSID_TG_CTRL_DISABLE	0xa06436
 #define CAMSS_CSID_TG_CTRL_ENABLE	0xa06437
-#define CAMSS_CSID_TG_VC_CFG(v)		((v) == CAMSS_8x16 ? 0x0a4 : 0x0ac)
+#define CAMSS_CSID_TG_VC_CFG(v)		(CAMSS_CSID_IS_3_5(v) ? 0x0ac : 0x0a4)
 #define CAMSS_CSID_TG_VC_CFG_H_BLANKING		0x3ff
 #define CAMSS_CSID_TG_VC_CFG_V_BLANKING		0x7f
 #define CAMSS_CSID_TG_DT_n_CGG_0(v, n)	\
-			(((v) == CAMSS_8x16 ? 0x0ac : 0x0b4) + 0xc * (n))
+			((CAMSS_CSID_IS_3_5(v) ? 0x0b4 : 0x0ac) + 0xc * (n))
 #define CAMSS_CSID_TG_DT_n_CGG_1(v, n)	\
-			(((v) == CAMSS_8x16 ? 0x0b0 : 0x0b8) + 0xc * (n))
+			((CAMSS_CSID_IS_3_5(v) ? 0x0b8 : 0x0b0) + 0xc * (n))
 #define CAMSS_CSID_TG_DT_n_CGG_2(v, n)	\
-			(((v) == CAMSS_8x16 ? 0x0b4 : 0x0bc) + 0xc * (n))
+			((CAMSS_CSID_IS_3_5(v) ? 0x0bc : 0x0b4) + 0xc * (n))
 
 #define DATA_TYPE_EMBEDDED_DATA_8BIT	0x12
 #define DATA_TYPE_YUV422_8BIT		0x1e
