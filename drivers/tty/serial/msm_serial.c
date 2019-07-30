@@ -1695,12 +1695,42 @@ msm_serial_early_write_dm(struct console *con, const char *s, unsigned n)
 	__msm_console_write(&dev->port, s, n, true);
 }
 
+ #define MSM_PINCONF_2MA_NO_PULL		0x8
+static void __init somc_restore_pins_earliest(void)
+{
+	void __iomem *tlmm = NULL;
+	uint32_t pin_config = 0;
+	unsigned long address = 0x01014000;
+
+	if (address < 0x1000000)
+		return;
+
+	tlmm = early_ioremap(address, 0x1000);
+	if (!tlmm)
+		return;
+
+	pin_config = MSM_PINCONF_2MA_NO_PULL;
+	writel_relaxed(pin_config, tlmm);
+
+	early_iounmap(tlmm, 0x1000);
+
+	wmb();
+}
+
 static int __init
 msm_serial_early_console_setup_dm(struct earlycon_device *device,
 				  const char *opt)
 {
+	struct earlycon_device *dev = NULL;
+
 	if (!device->port.membase)
 		return -ENODEV;
+
+	somc_restore_pins_earliest();
+
+	dev = device->con->data;
+
+	msm_wait_for_xmitr(&dev->port);
 
 	device->con->write = msm_serial_early_write_dm;
 	return 0;
