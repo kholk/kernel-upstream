@@ -564,10 +564,9 @@ static int qcom_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	} else {
 		/* make sure devices iommus dt node isn't referring to
 		 * multiple different iommu devices.  Multiple context
-		 * banks are ok, but multiple devices are not:
+		 * banks are ok, but multiple devices may be not:
 		 */
-		if (WARN_ON(qcom_iommu != fwspec->iommu_priv))
-			return -EINVAL;
+		WARN_ON(qcom_iommu != fwspec->iommu_priv);
 	}
 
 	return iommu_fwspec_add_ids(dev, &asid, 1);
@@ -829,6 +828,10 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, qcom_iommu);
 
+	/* HACK: Raise clocks refcount to keep them enabled
+	 * and avoid hypervisor faults triggering reboot.
+	 */
+	qcom_iommu_enable_clocks(qcom_iommu);
 	pm_runtime_enable(dev);
 
 	/* register context bank devices, which are child nodes: */
