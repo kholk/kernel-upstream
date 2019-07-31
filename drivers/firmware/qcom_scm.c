@@ -344,6 +344,12 @@ int qcom_scm_iommu_secure_ptbl_init(u64 addr, u32 size, u32 spare)
 }
 EXPORT_SYMBOL(qcom_scm_iommu_secure_ptbl_init);
 
+int qcom_scm_iommu_set_cp_pool_size(u32 spare, u32 size)
+{
+	return __qcom_scm_iommu_set_cp_pool_size(__scm->dev, spare, size);
+}
+EXPORT_SYMBOL(qcom_scm_iommu_set_cp_pool_size);
+
 int qcom_scm_io_readl(phys_addr_t addr, unsigned int *val)
 {
 	return __qcom_scm_io_readl(__scm->dev, addr, val);
