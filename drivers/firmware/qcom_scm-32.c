@@ -602,6 +602,12 @@ int __qcom_scm_iommu_set_cp_pool_size(struct device *dev, u32 spare, u32 size)
 	return -ENODEV;
 }
 
+int __qcom_scm_iommu_set_pt_format(struct device *dev, u32 sec_id, u32 ctx_num,
+				   u32 pt_fmt)
+{
+	return -ENODEV;
+}
+
 int __qcom_scm_io_readl(struct device *dev, phys_addr_t addr,
 			unsigned int *val)
 {
