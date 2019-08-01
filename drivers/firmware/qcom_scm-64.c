@@ -471,6 +471,21 @@ int __qcom_scm_iommu_secure_ptbl_init(struct device *dev, u64 addr, u32 size,
 	return ret;
 }
 
+int __qcom_scm_iommu_set_pt_format(struct device *dev, u32 sec_id, u32 ctx_num,
+				   u32 pt_fmt)
+{
+	struct qcom_scm_desc desc = {0};
+	struct arm_smccc_res res;
+
+	desc.args[0] = sec_id;
+	desc.args[1] = ctx_num;
+	desc.args[2] = pt_fmt; /* 0: LPAE AArch32 - 1: AArch64 */
+	desc.arginfo = QCOM_SCM_ARGS(3);
+
+	return qcom_scm_call(dev, QCOM_SCM_SVC_SMMU_PROGRAM,
+			     QCOM_SCM_IOMMU_PT_FORMAT, &desc, &res);
+}
+
 int __qcom_scm_set_dload_mode(struct device *dev, bool enable)
 {
 	struct qcom_scm_desc desc = {0};
