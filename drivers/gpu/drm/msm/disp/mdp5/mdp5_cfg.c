@@ -765,8 +765,7 @@ struct mdp5_cfg_handler *mdp5_cfg_init(struct mdp5_kms *mdp5_kms,
 		uint32_t major, uint32_t minor)
 {
 	struct drm_device *dev = mdp5_kms->dev;
-	struct platform_device *mdp5_pdev = mdp5_kms->pdev;
-	struct platform_device *pdev = to_platform_device(dev->dev);
+	struct platform_device *pdev = mdp5_kms->pdev;
 	struct mdp5_cfg_handler *cfg_handler;
 	struct mdp5_cfg_platform *pconfig;
 	int i, ret = 0;
@@ -802,7 +801,7 @@ struct mdp5_cfg_handler *mdp5_cfg_init(struct mdp5_kms *mdp5_kms,
 	cfg_handler->revision = minor;
 	cfg_handler->config.hw = mdp5_cfg;
 
-	pconfig = mdp5_get_config(mdp5_pdev);
+	pconfig = mdp5_get_config(pdev);
 	memcpy(&cfg_handler->config.platform, pconfig, sizeof(*pconfig));
 
 	DBG("MDP5: %s hw config selected", mdp5_cfg->name);
@@ -820,9 +819,9 @@ static struct mdp5_cfg_platform *mdp5_get_config(struct platform_device *pdev)
 {
 	static struct mdp5_cfg_platform config = {};
 
-	config.iommu = iommu_get_domain_for_dev(&dev->dev);
+	config.iommu = iommu_get_domain_for_dev(&pdev->dev);
 	if (!config.iommu) {
-		DRM_DEV_DEBUG(dev,
+		DRM_DEV_DEBUG(&pdev->dev,
 			"No DMA-attached domain, allocating a new one\n");
 		config.iommu = iommu_domain_alloc(&platform_bus_type);
 	}
