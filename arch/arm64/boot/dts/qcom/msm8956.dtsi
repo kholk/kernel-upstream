@@ -355,7 +355,7 @@
 	};
 
 	firmware {
-		scm {
+		scm: scm {
 			compatible = "qcom,scm";
 			clocks = <&gcc GCC_CRYPTO_CLK>,
 				 <&gcc GCC_CRYPTO_AXI_CLK>,
@@ -2039,11 +2039,11 @@
 			status = "disabled";
 
 			mba {
-				memory-region = <&modem_mem>;
+				memory-region = <&lpass_region>;
 			};
 
 			mpss {
-				memory-region = <&reloc_mem>;
+				memory-region = <&mpss_region>;
 			};
 
 			smd-edge {
