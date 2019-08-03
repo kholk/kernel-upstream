@@ -814,9 +814,21 @@ msm_gpu_create_address_space(struct msm_gpu *gpu, struct platform_device *pdev,
 	 * simple and to get something working, just use a single address space:
 	 */
 	if (!adreno_is_a2xx(to_adreno_gpu(gpu))) {
-		struct iommu_domain *iommu = iommu_domain_alloc(&platform_bus_type);
-		if (!iommu)
-			return NULL;
+		struct iommu_domain *iommu =
+				iommu_get_domain_for_dev(&pdev->dev);
+		if (!iommu) {
+			DRM_DEV_DEBUG(gpu->dev->dev,
+				"%s: No DMA-attached domain, allocating "
+				" a new one\n", gpu->name);
+
+			iommu = iommu_domain_alloc(&platform_bus_type);
+			if (!iommu) {
+				DRM_DEV_ERROR(gpu->dev->dev,
+					"%s: Cannot allocate IOMMU domain\n",
+					gpu->name);
+				return NULL;
+			}
+		}
 
 		iommu->geometry.aperture_start = va_start;
 		iommu->geometry.aperture_end = va_end;
