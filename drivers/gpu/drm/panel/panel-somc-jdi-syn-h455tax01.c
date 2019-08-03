@@ -417,11 +417,11 @@ static int h455tax01_panel_add(struct h455tax01_panel *h455tax01_panel)
 		h455tax01_panel->avdd_supply = NULL;
 	}
 
-	h455tax01_panel->avdd_supply = devm_regulator_get_optional(dev, "tvdd");
+	h455tax01_panel->tvdd_supply = devm_regulator_get_optional(dev, "tvdd");
 	if (IS_ERR(h455tax01_panel->tvdd_supply)) {
 		dev_err(dev, "cannot get tvdd regulator: %ld\n",
 			PTR_ERR(h455tax01_panel->tvdd_supply));
-		h455tax01_panel->avdd_supply = NULL;
+		h455tax01_panel->tvdd_supply = NULL;
 	}
 
 	h455tax01_panel->pan_reset_gpio = devm_gpiod_get(dev,
