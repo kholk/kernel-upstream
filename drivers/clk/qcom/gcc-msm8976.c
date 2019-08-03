@@ -1313,9 +1313,10 @@ static struct clk_rcg2 esc0_clk_src = {
 	.freq_tbl = ftbl_esc0_clk_src,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "esc0_clk_src",
-		.parent_names = gcc_parent_names_10,
-		.num_parents = 1,
+		.parent_names = gcc_parent_names_mdss_byte1,
+		.num_parents =  ARRAY_SIZE(gcc_parent_names_mdss_byte1),
 		.ops = &clk_rcg2_ops,
+		.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
 	},
 };
 
@@ -1411,23 +1412,23 @@ static struct clk_rcg2 vsync_clk_src = {
 };
 
 static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+//	F(19200000, P_XO, 1, 0, 0),
 	F(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0),
 	F(80000000, P_GPLL0_OUT_MAIN, 10, 0, 0),
 	F(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0),
 	F(133333333, P_GPLL0_OUT_MAIN, 6, 0, 0),
 	F(160000000, P_GPLL0_OUT_MAIN, 5, 0, 0),
 	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
-	F(228571429, P_GPLL0_OUT_MAIN, 3.5,    0,     0),
-	F(240000000, P_GPLL6_GFX3D, 4.5,    0,     0),
-	F(266666667, P_GPLL0_OUT_MAIN, 3, 0, 0),
-	F(300000000, P_GPLL4_GFX3D, 4, 0, 0),
-	F(360000000, P_GPLL6_GFX3D, 3, 0, 0),
-	F(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0),
-	F(432000000, P_GPLL6_GFX3D, 2.5,    0,     0),
-	F(480000000, P_GPLL4_GFX3D, 2.5,    0,     0),
-	F(540000000, P_GPLL6_GFX3D, 2, 0, 0),
-	F(600000000, P_GPLL4_GFX3D, 2, 0, 0),
+//	F(228571429, P_GPLL0_OUT_MAIN, 3.5,    0,     0),
+	//F(240000000, P_GPLL6_GFX3D, 4.5,    0,     0),
+//	F(266666667, P_GPLL0_OUT_MAIN, 3, 0, 0),
+//	F(300000000, P_GPLL4_GFX3D, 4, 0, 0),
+//	F(360000000, P_GPLL6_GFX3D, 3, 0, 0),
+//	F(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0),
+//	F(432000000, P_GPLL6_GFX3D, 2.5,    0,     0),
+//	F(480000000, P_GPLL4_GFX3D, 2.5,    0,     0),
+//	F(540000000, P_GPLL6_GFX3D, 2, 0, 0),
+//	F(600000000, P_GPLL4_GFX3D, 2, 0, 0),
 	{ }
 };
 
@@ -2781,7 +2782,7 @@ static struct clk_branch gcc_oxili_gmem_clk = {
 				"gfx3d_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			//.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2916,7 +2917,7 @@ static struct clk_branch gcc_mdss_esc0_clk = {
 				"esc0_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3044,6 +3045,10 @@ static struct clk_branch gcc_bimc_gfx_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_bimc_gfx_clk",
+			.parent_names = (const char*[]) {
+				"gcc_oxili_gmem_clk",
+			},
+			.num_parents = 1,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3072,7 +3077,7 @@ static struct clk_branch gcc_oxili_aon_clk = {
 				"gfx3d_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			//.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3603,6 +3608,10 @@ static struct clk_branch gcc_gfx_1_tbu_clk = {
 		.enable_mask = BIT(19),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_gfx_1_tbu_clk",
+			.parent_names = (const char *[]){
+				"gcc_gfx_tbu_clk",
+			},
+			.num_parents = 1,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3629,6 +3638,10 @@ static struct clk_branch gcc_gfx_tcu_clk = {
 		.enable_mask = BIT(2),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_gfx_tcu_clk",
+//			.parent_names = (const char *[]){
+//				"gcc_gtcu_ahb_clk",
+//			},
+//			.num_parents = 1,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3780,6 +3793,7 @@ static struct gdsc venus_core0_gdsc = {
 	.pd = {
 		.name = "venus_core0_gdsc",
 	},
+	.parent = &venus_gdsc.pd,
 	.pwrsts = PWRSTS_OFF_ON,
 	.flags = VOTABLE,
 };
@@ -3860,6 +3874,10 @@ static struct gdsc oxili_cx_gdsc = {
 	.pd = {
 		.name = "oxili_cx_gdsc",
 	},
+	/* Temporarily HACK the GX parent in here until the
+	 * GPU driver gets support
+	 */
+	.parent = &oxili_gx_gdsc.pd,
 	.pwrsts = PWRSTS_OFF_ON,
 	.flags = VOTABLE,
 };
@@ -4177,6 +4195,12 @@ static int gcc_8976_probe(struct platform_device *pdev)
 	val &= ~0xF0;
 	val |= (0 << 4);
 	regmap_write(regmap, 0x59020, val);
+
+	/* Make MDSS happy at boot */
+	clk_set_rate(esc0_clk_src.clkr.hw.clk, 19200000);
+	clk_set_rate(gcc_mdss_esc0_clk.clkr.hw.clk, 19200000);
+//	clk_set_rate(gcc_oxili_timer_clk.clkr.hw.clk, 19200000);
+//	clk_set_rate(gcc_oxili_gfx3d_clk.clkr.hw.clk, 200000000);
 
 	dev_dbg(&pdev->dev, "Registered GCC-8976 clocks\n");
 
