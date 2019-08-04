@@ -349,6 +349,13 @@
 		regulator-boot-on;
 	};
 
+	panel_tvdd: tvdd-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "panel-tvdd";
+		gpio = <&msm_gpio 126 0>;
+		// This regulator is active-low.
+	};
+
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
