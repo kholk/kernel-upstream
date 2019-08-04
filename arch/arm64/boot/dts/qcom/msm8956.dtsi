@@ -974,18 +974,22 @@
 			#reset-cells = <1>;
 
 			ulpi {
-				usb_hs_phy: phy {
-					compatible = "qcom,usb-hs-phy-msm8956",
-						     "qcom,usb-hs-phy";
+				usb_hs_phy: phy@0x6c000 {
+					compatible = "qcom,msm8956-usb-hsphy";
 					#phy-cells = <0>;
-					v1p8-supply = <&pm8950_l7>;
-					v3p3-supply = <&pm8950_l13>;
-					clocks = <&xo_board>, <&gcc GCC_USB2A_PHY_SLEEP_CLK>;
-					clock-names = "ref", "sleep";
-					resets = <&gcc RST_QUSB2_PHY_BCR>, <&gcc RST_USB2_HS_PHY_ONLY_BCR>;
+					//vdd-supply = <&pm8950_s6>;
+					vdda1p8-supply = <&pm8950_l7>;
+					vdda3p3-supply = <&pm8950_l13>;
+					qcom,vdd-voltage-level = <0 256 512>;/* <RPM_SMD_REGULATOR_LEVEL_NONE
+								RPM_SMD_REGULATOR_LEVEL_NOM
+								RPM_SMD_REGULATOR_LEVEL_BINNING>;*/
+					clocks = <&xo_board>,
+						<&gcc GCC_USB_HS_PHY_CFG_AHB_CLK>,
+						<&gcc GCC_USB2A_PHY_SLEEP_CLK>;
+					clock-names = "ref", "phy", "sleep";
+					resets = <&gcc RST_QUSB2_PHY_BCR>,
+						<&gcc RST_USB2_HS_PHY_ONLY_BCR>;
 					reset-names = "phy", "por";
-					qcom,init-seq = /bits/ 8 <0x0 0x73
-						0x1 0x38 0x2 0x1b>;
 				};
 			};
 		};
