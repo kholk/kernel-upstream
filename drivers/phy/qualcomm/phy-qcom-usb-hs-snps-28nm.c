@@ -347,6 +347,8 @@ static int qcom_snps_hsphy_init(struct phy *phy)
 	int state;
 	int ret;
 
+	BUG();
+
 	ret = qcom_snps_hsphy_reset(priv);
 	if (ret)
 		return ret;
@@ -393,6 +395,8 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
 	struct phy *phy;
 	int ret;
 	int i;
+
+	BUG();
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -489,6 +493,17 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
  */
 #define HSPHY_INIT_CFG(o, v, d)	{ .offset = o, .val = v, .delay = d, }
 
+static const struct hsphy_init_seq init_seq_msm8956[] = {
+	HSPHY_INIT_CFG(0x80, 0x73, 0),
+	HSPHY_INIT_CFG(0x81, 0x38, 0),
+	HSPHY_INIT_CFG(0x82, 0x1b, 0),
+};
+
+static const struct hsphy_data hsphy_data_msm8956 = {
+	.init_seq = init_seq_msm8956,
+	.init_seq_num = ARRAY_SIZE(init_seq_msm8956),
+};
+
 static const struct hsphy_init_seq init_seq_qcs404[] = {
 	HSPHY_INIT_CFG(0xc0, 0x01, 0),
 	HSPHY_INIT_CFG(0xe8, 0x0d, 0),
@@ -511,6 +526,7 @@ static const struct hsphy_data hsphy_data_qcs404 = {
 };
 
 static const struct of_device_id qcom_snps_hsphy_match[] = {
+	{ .compatible = "qcom,msm8956-usb-hsphy", .data = &hsphy_data_msm8956, },
 	{ .compatible = "qcom,qcs404-usb-hsphy", .data = &hsphy_data_qcs404, },
 	{ },
 };
