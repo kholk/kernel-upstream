@@ -396,8 +396,6 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
 	int ret;
 	int i;
 
-	BUG();
-
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -494,9 +492,13 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
 #define HSPHY_INIT_CFG(o, v, d)	{ .offset = o, .val = v, .delay = d, }
 
 static const struct hsphy_init_seq init_seq_msm8956[] = {
-	HSPHY_INIT_CFG(0x80, 0x73, 0),
+	/*HSPHY_INIT_CFG(0x80, 0x73, 0),
 	HSPHY_INIT_CFG(0x81, 0x38, 0),
-	HSPHY_INIT_CFG(0x82, 0x1b, 0),
+	HSPHY_INIT_CFG(0x82, 0x1b, 0),*/
+	HSPHY_INIT_CFG(0x80, 0x74, 0),
+	HSPHY_INIT_CFG(0x81, 0x6f, 0),
+	HSPHY_INIT_CFG(0x82, 0x3f, 0),
+	HSPHY_INIT_CFG(0x83, 0x33, 0),
 };
 
 static const struct hsphy_data hsphy_data_msm8956 = {
