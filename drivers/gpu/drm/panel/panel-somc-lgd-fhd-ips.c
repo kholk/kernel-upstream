@@ -37,10 +37,10 @@ struct lgd_fhd_ips_panel {
 
 	struct regulator *vddio_supply;
 	struct regulator *avdd_supply;
+	struct regulator *pvddio_supply;
+	struct regulator *tvddio_supply;
 
-	struct gpio_desc *pan_vddio_gpio;
 	struct gpio_desc *pan_reset_gpio;
-	struct gpio_desc *ts_vddio_gpio;
 	struct gpio_desc *ts_reset_gpio;
 
 	bool prepared;
@@ -196,8 +196,8 @@ static int lgd_fhd_ips_panel_unprepare(struct drm_panel *panel)
 		usleep_range(10000, 11000);
 	}
 
-	if (lgd_panel->pan_vddio_gpio)
-		gpiod_set_value(lgd_panel->pan_vddio_gpio, 0);
+	if (lgd_panel->pvddio_supply)
+		regulator_disable(lgd_panel->pvddio_supply);
 #endif
 	lgd_panel->prepared = false;
 
@@ -230,17 +230,18 @@ static int lgd_fhd_ips_panel_prepare(struct drm_panel *panel)
 	/* TODO: LAB/IBB */
 
 	/* Enable the in-cell supply to panel */
-	rc = gpiod_direction_output(lgd_panel->pan_vddio_gpio, 0);
+	if (lgd_panel->pvddio_supply)
+		rc = regulator_enable(lgd_panel->pvddio_supply);
 	if (rc) {
-		dev_err(dev, "Cannot set pvddio-gpio direction: %d", rc);
+		dev_err(dev, "Cannot enable pvddio: %d", rc);
 		goto poweroff_s1;
 	}
 	usleep_range(1000, 1100);
 
 	/* Enable the in-cell supply to touch-controller */
-	rc = gpiod_direction_output(lgd_panel->ts_vddio_gpio, 0);
+	rc = regulator_enable(lgd_panel->tvddio_supply);
 	if (rc) {
-		dev_err(dev, "Cannot set tvddio-gpio direction: %d", rc);
+		dev_err(dev, "Cannot enable TVDDIO: %d", rc);
 		goto poweroff_s2;
 	}
 	usleep_range(1000, 1100);
@@ -275,7 +276,10 @@ static int lgd_fhd_ips_panel_prepare(struct drm_panel *panel)
 
 poweroff_s2:
 	/* Disable it to avoid current/voltage spikes in the enable path */
-	gpiod_direction_output(lgd_panel->pan_vddio_gpio, 1);
+	if (lgd_panel->pvddio_supply)
+		regulator_disable(lgd_panel->pvddio_supply);
+	// TODO: TVDDIO not disabled!
+
 poweroff_s1:
 	regulator_disable(lgd_panel->avdd_supply);
 	regulator_disable(lgd_panel->vddio_supply);
@@ -358,12 +362,18 @@ static int lgd_fhd_ips_panel_add(struct lgd_fhd_ips_panel *lgd_panel)
 		lgd_panel->avdd_supply = NULL;
 	}
 
-	lgd_panel->pan_vddio_gpio = devm_gpiod_get(dev,
-					"pvddio", GPIOD_ASIS);
-	if (IS_ERR(lgd_panel->pan_vddio_gpio)) {
-		dev_err(dev, "cannot get pvddio-gpio: %ld\n",
-			PTR_ERR(lgd_panel->pan_vddio_gpio));
-		return PTR_ERR(lgd_panel->pan_vddio_gpio);
+	lgd_panel->pvddio_supply = devm_regulator_get_optional(dev, "pvddio");
+	if (IS_ERR(lgd_panel->pvddio_supply)) {
+		dev_err(dev, "cannot get pvddio regulator: %ld\n",
+			PTR_ERR(lgd_panel->pvddio_supply));
+		lgd_panel->pvddio_supply = NULL;
+	}
+
+	lgd_panel->tvddio_supply = devm_regulator_get_optional(dev, "tvddio");
+	if (IS_ERR(lgd_panel->tvddio_supply)) {
+		dev_err(dev, "cannot get tvddio regulator: %ld\n",
+			PTR_ERR(lgd_panel->tvddio_supply));
+		lgd_panel->tvddio_supply = NULL;
 	}
 
 	lgd_panel->pan_reset_gpio = devm_gpiod_get(dev,
@@ -372,14 +382,6 @@ static int lgd_fhd_ips_panel_add(struct lgd_fhd_ips_panel *lgd_panel)
 		dev_err(dev, "cannot get preset-gpio: %ld\n",
 			PTR_ERR(lgd_panel->pan_reset_gpio));
 		lgd_panel->pan_reset_gpio = NULL;
-	}
-
-	lgd_panel->ts_vddio_gpio = devm_gpiod_get(dev,
-					"tvddio", GPIOD_ASIS);
-	if (IS_ERR(lgd_panel->ts_vddio_gpio)) {
-		dev_err(dev, "cannot get tvddio-gpio: %ld\n",
-			PTR_ERR(lgd_panel->ts_vddio_gpio));
-		lgd_panel->ts_vddio_gpio = NULL;
 	}
 
 	lgd_panel->ts_reset_gpio = devm_gpiod_get(dev,
