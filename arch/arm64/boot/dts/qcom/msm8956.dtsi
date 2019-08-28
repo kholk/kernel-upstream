@@ -973,6 +973,8 @@
 			status = "ok";
 			#reset-cells = <1>;
 
+			extcon = <&usb_vbus>, <&usb_id>;
+
 			ulpi {
 				usb_hs_phy: phy@0x6c000 {
 					#phy-cells = <0>;
