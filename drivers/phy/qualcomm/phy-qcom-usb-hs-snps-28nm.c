@@ -444,19 +444,27 @@ static int qcom_snps_hsphy_probe(struct ulpi *ulpi)
 		dev_err(dev, "failed to read qcom,vdd-voltage-level\n");
 		return ret;
 	}
+	if (device_property_read_bool(dev, "extcon"))
+		priv->vbus_edev = extcon_get_edev_by_phandle(dev, 0);
 
-	extcon_node = of_graph_get_remote_node(dev->of_node, -1, -1);
-	if (extcon_node) {
-		priv->vbus_edev = extcon_find_edev_by_node(extcon_node);
-		if (IS_ERR(priv->vbus_edev)) {
-			if (PTR_ERR(priv->vbus_edev) != -ENODEV) {
-				of_node_put(extcon_node);
-				return PTR_ERR(priv->vbus_edev);
+	if (IS_ERR(priv->vbus_edev)) {
+		dev_err(dev, "Failed to get extcon by phandle. Trying remote node");
+
+		extcon_node = of_graph_get_remote_node(dev->of_node, -1, -1);
+		if (extcon_node) {
+			priv->vbus_edev = extcon_find_edev_by_node(extcon_node);
+			if (IS_ERR(priv->vbus_edev)) {
+				if (PTR_ERR(priv->vbus_edev) != -ENODEV) {
+					of_node_put(extcon_node);
+					return PTR_ERR(priv->vbus_edev);
+				}
+				priv->vbus_edev = NULL;
 			}
+		} else {
 			priv->vbus_edev = NULL;
 		}
+		of_node_put(extcon_node);
 	}
-	of_node_put(extcon_node);
 
 	if (priv->vbus_edev) {
 		priv->vbus_notify.notifier_call = qcom_snps_hsphy_vbus_notifier;

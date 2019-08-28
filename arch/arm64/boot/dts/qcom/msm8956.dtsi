@@ -991,6 +991,13 @@
 					resets = <&gcc RST_QUSB2_PHY_BCR>,
 						<&gcc RST_USB2_HS_PHY_ONLY_BCR>;
 					reset-names = "phy", "por";
+
+					extcon = <&usb_vbus>;
+					// port {
+					// 	ep_usb_phy: endpoint {
+					// 		remote-endpoint = <&usb_vbus>;
+					// 	};
+					// };
 				};
 			};
 		};
