@@ -975,7 +975,6 @@
 
 			ulpi {
 				usb_hs_phy: phy@0x6c000 {
-					compatible = "qcom,msm8956-usb-hsphy";
 					#phy-cells = <0>;
 					//vdd-supply = <&pm8950_s6>;
 					vdda1p8-supply = <&pm8950_l7>;

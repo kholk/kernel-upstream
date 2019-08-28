@@ -46,7 +46,7 @@
 
 &usb_hs_phy {
 	status = "ok";
-	qcom,init-seq = /bits/ 8 <0x0 0x74 0x1 0x68 0x2 0x3f 0x3 0x33>;
+	compatible = "qcom,msm8956-kugo-usb-hsphy";
 };
 
 &dsi0 {
