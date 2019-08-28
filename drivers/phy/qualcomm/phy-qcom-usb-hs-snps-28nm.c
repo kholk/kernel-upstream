@@ -492,18 +492,38 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
 #define HSPHY_INIT_CFG(o, v, d)	{ .offset = o, .val = v, .delay = d, }
 
 static const struct hsphy_init_seq init_seq_msm8956[] = {
-	/*HSPHY_INIT_CFG(0x80, 0x73, 0),
+	HSPHY_INIT_CFG(0x80, 0x73, 0),
 	HSPHY_INIT_CFG(0x81, 0x38, 0),
-	HSPHY_INIT_CFG(0x82, 0x1b, 0),*/
+	HSPHY_INIT_CFG(0x82, 0x1b, 0),
+};
+
+static const struct hsphy_data hsphy_data_msm8956 = {
+	.init_seq = init_seq_msm8956,
+	.init_seq_num = ARRAY_SIZE(init_seq_msm8956),
+};
+
+static const struct hsphy_init_seq init_seq_msm8956_suzu[] = {
 	HSPHY_INIT_CFG(0x80, 0x74, 0),
 	HSPHY_INIT_CFG(0x81, 0x6f, 0),
 	HSPHY_INIT_CFG(0x82, 0x3f, 0),
 	HSPHY_INIT_CFG(0x83, 0x33, 0),
 };
 
-static const struct hsphy_data hsphy_data_msm8956 = {
-	.init_seq = init_seq_msm8956,
-	.init_seq_num = ARRAY_SIZE(init_seq_msm8956),
+static const struct hsphy_data hsphy_data_msm8956_suzu = {
+	.init_seq = init_seq_msm8956_suzu,
+	.init_seq_num = ARRAY_SIZE(init_seq_msm8956_suzu),
+};
+
+static const struct hsphy_init_seq init_seq_msm8956_kugo[] = {
+	HSPHY_INIT_CFG(0x80, 0x74, 0),
+	HSPHY_INIT_CFG(0x81, 0x68, 0),
+	HSPHY_INIT_CFG(0x82, 0x3f, 0),
+	HSPHY_INIT_CFG(0x83, 0x33, 0),
+};
+
+static const struct hsphy_data hsphy_data_msm8956_kugo = {
+	.init_seq = init_seq_msm8956_kugo,
+	.init_seq_num = ARRAY_SIZE(init_seq_msm8956_kugo),
 };
 
 static const struct hsphy_init_seq init_seq_qcs404[] = {
@@ -528,7 +548,8 @@ static const struct hsphy_data hsphy_data_qcs404 = {
 };
 
 static const struct of_device_id qcom_snps_hsphy_match[] = {
-	{ .compatible = "qcom,msm8956-usb-hsphy", .data = &hsphy_data_msm8956, },
+	{ .compatible = "qcom,msm8956-suzu-usb-hsphy", .data = &hsphy_data_msm8956_suzu, },
+	{ .compatible = "qcom,msm8956-kugo-usb-hsphy", .data = &hsphy_data_msm8956_kugo, },
 	{ .compatible = "qcom,qcs404-usb-hsphy", .data = &hsphy_data_qcs404, },
 	{ },
 };

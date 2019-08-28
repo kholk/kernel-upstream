@@ -19,7 +19,7 @@
 };
 
 &usb_hs_phy {
-	qcom,init-seq = /bits/ 8 <0x0 0x74 0x1 0x6f 0x2 0x3f 0x3 0x33>;
+	compatible = "qcom,msm8956-suzu-usb-hsphy";
 };
 
 &dsi0 {
