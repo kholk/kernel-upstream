@@ -23,9 +23,20 @@
 #define USBIN_UNREG BIT(4)
 #define USBIN_LV BIT(3)
 
+#define RID_GND_DET_STS BIT(2)
+
+#define SUBTYPE_REG 0x5
+
+#define SMBCHG_USB_CHGPTH_SUBTYPE 0x4
+#define SMBCHG_LITE_USB_CHGPTH_SUBTYPE 0x54
+#define SMBCHG_LITE_OTG_SUBTYPE 0x58
+
+struct qcom_pmi8950_charger_data;
+
 struct qcom_pmi8950_charger_info {
 	struct device *dev;
 	struct platform_device *pdev;
+	struct qcom_pmi8950_charger_data *data;
 
 	struct regmap *regmap;
 	struct extcon_dev *edev;
@@ -33,11 +44,19 @@ struct qcom_pmi8950_charger_info {
 	struct delayed_work wq_detcable;
 	unsigned long debounce_jiffies;
 
-	u32 usb_chgpth_base;
+	u32 reg_base;
+};
+
+struct qcom_pmi8950_charger_data {
+	bool (*is_present)(struct qcom_pmi8950_charger_info *);
+	unsigned int extcon_id;
+	const char *irq_name;
+	unsigned long irq_trigger;
 };
 
 static const unsigned int qcom_pmi8950_charger_cable[] = {
 	EXTCON_USB,
+	EXTCON_USB_HOST,
 	EXTCON_NONE,
 };
 
@@ -46,8 +65,7 @@ static bool is_src_detect_high(struct qcom_pmi8950_charger_info *info)
 	int rc;
 	u8 reg;
 
-	rc = regmap_bulk_read(info->regmap, info->usb_chgpth_base + RT_STS,
-			      &reg, 1);
+	rc = regmap_bulk_read(info->regmap, info->reg_base + RT_STS, &reg, 1);
 	if (rc < 0) {
 		dev_err(info->dev, "Couldn't read usb rt status rc = %d\n", rc);
 		return false;
@@ -63,8 +81,7 @@ static bool is_usb_present(struct qcom_pmi8950_charger_info *info)
 	int rc;
 	u8 reg;
 
-	rc = regmap_bulk_read(info->regmap, info->usb_chgpth_base + RT_STS,
-			      &reg, 1);
+	rc = regmap_bulk_read(info->regmap, info->reg_base + RT_STS, &reg, 1);
 	if (rc < 0) {
 		dev_err(info->dev, "Couldn't read usb rt status rc = %d\n", rc);
 		return false;
@@ -75,8 +92,8 @@ static bool is_usb_present(struct qcom_pmi8950_charger_info *info)
 	if (!(reg & USBIN_SRC_DET_BIT) || (reg & USBIN_OV_BIT))
 		return false;
 
-	rc = regmap_bulk_read(info->regmap, info->usb_chgpth_base + INPUT_STS,
-			      &reg, 1);
+	rc = regmap_bulk_read(info->regmap, info->reg_base + INPUT_STS, &reg,
+			      1);
 	if (rc < 0) {
 		dev_err(info->dev, "Couldn't read usb status rc = %d\n", rc);
 		return false;
@@ -87,21 +104,66 @@ static bool is_usb_present(struct qcom_pmi8950_charger_info *info)
 	return !!(reg & (USBIN_9V | USBIN_UNREG | USBIN_LV));
 }
 
+static bool is_otg_present_schg_lite(struct qcom_pmi8950_charger_info *info)
+{
+	int rc;
+	u8 reg;
+
+	rc = regmap_bulk_read(info->regmap, info->reg_base + RT_STS, &reg, 1);
+	if (rc < 0) {
+		dev_err(info->dev, "Couldn't read otg RT status rc = %d\n", rc);
+		return false;
+	}
+
+	return !!(reg & RID_GND_DET_STS);
+}
+
 static void qcom_pmi8950_charger_detect_cable(struct work_struct *work)
 {
 	struct qcom_pmi8950_charger_info *info =
 		container_of(to_delayed_work(work),
 			     struct qcom_pmi8950_charger_info, wq_detcable);
 
+	bool present = info->data->is_present(info);
+
+	extcon_set_state_sync(info->edev, info->data->extcon_id, present);
+}
+
+/* Specifics: */
+
+static bool is_charger_present(struct qcom_pmi8950_charger_info *info)
+{
 	bool usb_present = is_usb_present(info);
 	bool src_detect = is_src_detect_high(info);
 
 	dev_notice(info->dev, "%s: otg_present: %d, src_detect: %d\n", __func__,
 		   usb_present, src_detect);
 
-	extcon_set_state_sync(info->edev, EXTCON_USB,
-			      src_detect && usb_present);
+	return src_detect && usb_present;
 }
+
+static bool is_otg_present(struct qcom_pmi8950_charger_info *info)
+{
+	bool otg_present = is_otg_present_schg_lite(info);
+
+	dev_notice(info->dev, "%s: otg_present: %d\n", __func__, otg_present);
+
+	return otg_present;
+}
+
+static struct qcom_pmi8950_charger_data charger_data = {
+	.is_present = is_charger_present,
+	.extcon_id = EXTCON_USB,
+	.irq_name = "usbin-src-det",
+	.irq_trigger = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+};
+
+static struct qcom_pmi8950_charger_data otg_data = {
+	.is_present = is_otg_present,
+	.extcon_id = EXTCON_USB_HOST,
+	.irq_name = "usbid-change",
+	.irq_trigger = IRQF_TRIGGER_FALLING,
+};
 
 static irqreturn_t qcom_pmi8950_charger_irq_handler(int irq, void *dev_id)
 {
@@ -137,21 +199,26 @@ static int qcom_pmi8950_charger_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-#define SUBTYPE_REG 0x5
 	ret = regmap_bulk_read(info->regmap, base + SUBTYPE_REG, &subtype, 1);
 	if (ret) {
 		dev_err(dev, "Peripheral subtype read failed ret=%d\n", ret);
 		return ret;
 	}
 	dev_info(dev, "subtype is 0x%x\n", subtype);
-#define SMBCHG_USB_CHGPTH_SUBTYPE 0x4
-#define SMBCHG_LITE_USB_CHGPTH_SUBTYPE 0x54
-	if (subtype != SMBCHG_USB_CHGPTH_SUBTYPE &&
-	    subtype != SMBCHG_LITE_USB_CHGPTH_SUBTYPE) {
+
+	switch (subtype) {
+	case SMBCHG_USB_CHGPTH_SUBTYPE:
+	case SMBCHG_LITE_USB_CHGPTH_SUBTYPE:
+		info->data = &charger_data;
+		break;
+	case SMBCHG_LITE_OTG_SUBTYPE:
+		info->data = &otg_data;
+		break;
+	default:
 		dev_err(dev, "Wrong subtype");
 		return -ENXIO;
 	}
-	info->usb_chgpth_base = base;
+	info->reg_base = base;
 
 	info->dev = dev;
 	info->pdev = pdev;
@@ -169,9 +236,10 @@ static int qcom_pmi8950_charger_probe(struct platform_device *pdev)
 	}
 
 	info->debounce_jiffies = msecs_to_jiffies(USB_ID_DEBOUNCE_MS);
-	INIT_DELAYED_WORK(&info->wq_detcable, qcom_pmi8950_charger_detect_cable);
+	INIT_DELAYED_WORK(&info->wq_detcable,
+			  qcom_pmi8950_charger_detect_cable);
 
-	info->irq = platform_get_irq_byname(pdev, "usbin-src-det");
+	info->irq = platform_get_irq_byname(pdev, info->data->irq_name);
 	if (info->irq < 0) {
 		dev_err(dev, "Failed to get irq: %d\n", info->irq);
 		return info->irq;
@@ -179,7 +247,7 @@ static int qcom_pmi8950_charger_probe(struct platform_device *pdev)
 
 	ret = devm_request_threaded_irq(
 		dev, info->irq, NULL, qcom_pmi8950_charger_irq_handler,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+		info->data->irq_trigger | IRQF_ONESHOT,
 		pdev->name, info);
 	if (ret < 0) {
 		dev_err(dev, "failed to request handler for ID IRQ\n");
@@ -208,8 +276,8 @@ static int qcom_pmi8950_charger_remove(struct platform_device *pdev)
 
 static const struct of_device_id qcom_pmi8950_charger_id_table[] = {
 	{ .compatible = "qcom,pmi8950-charger" },
-	// , .data = },
-	// { .compatible = "qcom,pmi8950-otg", .data = },
+	// TODO: Use .data here, cross-validate subtype?
+	{ .compatible = "qcom,pmi8950-otg" },
 	{}
 };
 MODULE_DEVICE_TABLE(of, qcom_pmi8950_charger_id_table);
