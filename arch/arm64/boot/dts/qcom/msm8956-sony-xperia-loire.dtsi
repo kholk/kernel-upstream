@@ -98,6 +98,7 @@
 		/* TODO: Should we move them?
 		 * vdd-supply, vio-supply are supported in this driver.
 		 */
+		vdd-supply = <&panel_tvdd>;
 
 		syna,reset-delay-ms = <220>;
 		syna,startup-delay-ms = <220>;
