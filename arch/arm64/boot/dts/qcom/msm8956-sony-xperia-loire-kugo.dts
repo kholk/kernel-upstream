@@ -59,15 +59,14 @@
 		vddio-supply = <&pm8950_l6>; /* 1.8V */
 		avdd-supply = <&pm8950_l23>; /* 1.2V */
 		tvdd-supply = <&pm8950_l22>; /* 3.0V */
+		tvddio-supply = <&panel_tvdd>;
 
 		preset-gpio = <&msm_gpio 25 0>;
-		tvddio-gpio = <&msm_gpio 126 0>;
 		treset-gpio = <&msm_gpio 64 0>;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&mdp_vsync_p_gpio &disp_reset_n_gpio
-			     &tp_vddio_en_gpio &tp_reset_n_gpio
-			     &tp_int_n_gpio>;
+			     &tp_reset_n_gpio &tp_int_n_gpio>;
 
 		ports {
 			#address-cells = <1>;

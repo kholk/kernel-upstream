@@ -188,19 +188,6 @@
 			input-enable;
 		};
 	};
-
-	tp_vddio_en_gpio: tp_vddio_en_gpio {
-		mux {
-			pins = "gpio126";
-			function = "gpio";
-		};
-		config {
-			pins = "gpio126";
-			drive-strength = <2>;
-			bias-disable;
-			output-low;
-		};
-	};
 };
 
 /* HACK!!!!!! */
