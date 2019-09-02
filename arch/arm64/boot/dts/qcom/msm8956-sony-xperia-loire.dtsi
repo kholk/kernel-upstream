@@ -142,18 +142,6 @@
 		};
 	};
 
-	mdp_vsync_p_gpio: active {
-		mux {
-			pins = "gpio24";
-			function = "mdp_vsync";
-		};
-		config {
-			pins = "gpio24";
-			drive-strength = <2>;
-			bias-pull-down;
-		};
-	};
-
 	disp_reset_n_gpio: disp_reset_n_gpio {
 		mux {
 			pins = "gpio25";

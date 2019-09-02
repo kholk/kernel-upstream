@@ -65,7 +65,7 @@
 		treset-gpio = <&msm_gpio 64 0>;
 
 		pinctrl-names = "default";
-		pinctrl-0 = <&mdp_vsync_p_gpio &disp_reset_n_gpio
+		pinctrl-0 = <&mdss_te_active &disp_reset_n_gpio
 			     &tp_reset_n_gpio &tp_int_n_gpio>;
 
 		ports {
