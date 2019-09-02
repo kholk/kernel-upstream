@@ -66,6 +66,7 @@ struct hsphy_priv {
 	unsigned int voltages[VREG_NUM][VOL_NUM];
 	const struct hsphy_data *data;
 	bool cable_connected;
+	bool cable_connected_at_power_on;
 	struct extcon_dev *vbus_edev;
 	struct notifier_block vbus_notify;
 	enum phy_mode mode;
@@ -232,7 +233,9 @@ static int qcom_snps_hsphy_power_on(struct phy *phy)
 	struct hsphy_priv *priv = phy_get_drvdata(phy);
 	int ret;
 
-	if (priv->cable_connected) {
+	priv->cable_connected_at_power_on = priv->cable_connected;
+
+	if (priv->cable_connected_at_power_on) {
 		ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
 		if (ret)
 			return ret;
@@ -254,7 +257,7 @@ static int qcom_snps_hsphy_power_off(struct phy *phy)
 {
 	struct hsphy_priv *priv = phy_get_drvdata(phy);
 
-	if (priv->cable_connected) {
+	if (priv->cable_connected_at_power_on) {
 		qcom_snps_hsphy_enable_hv_interrupts(priv);
 		clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
 	} else {
