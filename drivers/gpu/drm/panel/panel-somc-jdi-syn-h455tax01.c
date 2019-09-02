@@ -38,6 +38,7 @@ struct h455tax01_panel {
 	struct regulator *vddio_supply;
 	struct regulator *avdd_supply;
 	struct regulator *tvdd_supply;
+	struct regulator *tvddio_supply;
 
 	struct gpio_desc *pan_reset_gpio;
 	struct gpio_desc *ts_vddio_gpio;
@@ -299,9 +300,9 @@ static int h455tax01_panel_prepare(struct drm_panel *panel)
 	}
 #endif
 	/* Enable the in-cell supply to touch-controller */
-	rc = gpiod_direction_output(h455tax01_panel->ts_vddio_gpio, 0);
+	rc = regulator_enable(h455tax01_panel->tvddio_supply);
 	if (rc) {
-		dev_err(dev, "Cannot set tvddio-gpio direction: %d", rc);
+		dev_err(dev, "Cannot enable TVDDIO: %d", rc);
 		goto poweroff_s2;
 	}
 	usleep_range(1000, 1100);
@@ -424,20 +425,19 @@ static int h455tax01_panel_add(struct h455tax01_panel *h455tax01_panel)
 		h455tax01_panel->tvdd_supply = NULL;
 	}
 
+	h455tax01_panel->tvddio_supply = devm_regulator_get_optional(dev, "tvddio");
+	if (IS_ERR(h455tax01_panel->tvddio_supply)) {
+		dev_err(dev, "cannot get tvddio regulator: %ld\n",
+			PTR_ERR(h455tax01_panel->tvddio_supply));
+		h455tax01_panel->tvddio_supply = NULL;
+	}
+
 	h455tax01_panel->pan_reset_gpio = devm_gpiod_get(dev,
 					"preset", GPIOD_ASIS);
 	if (IS_ERR(h455tax01_panel->pan_reset_gpio)) {
 		dev_err(dev, "cannot get preset-gpio: %ld\n",
 			PTR_ERR(h455tax01_panel->pan_reset_gpio));
 		h455tax01_panel->pan_reset_gpio = NULL;
-	}
-
-	h455tax01_panel->ts_vddio_gpio = devm_gpiod_get(dev,
-					"tvddio", GPIOD_ASIS);
-	if (IS_ERR(h455tax01_panel->ts_vddio_gpio)) {
-		dev_err(dev, "cannot get tvddio-gpio: %ld\n",
-			PTR_ERR(h455tax01_panel->ts_vddio_gpio));
-		h455tax01_panel->ts_vddio_gpio = NULL;
 	}
 
 	h455tax01_panel->ts_reset_gpio = devm_gpiod_get(dev,
