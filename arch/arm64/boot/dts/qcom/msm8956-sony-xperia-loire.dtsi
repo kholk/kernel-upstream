@@ -254,7 +254,7 @@
 		regulator-name = "vdd_apc1";
 		/* regulator-min-microvolt = <500000>; */ // Original
 		/* Set .95V to prevent unstabilities during early dev */
-		regulator-min-microvolt = <950000>; 
+		regulator-min-microvolt = <950000>;
 		regulator-max-microvolt = <1165000>;
 	};
 
@@ -263,7 +263,7 @@
 		//regulator-always-on;
 
 		regulator-name = "vdd_gfx";
-		regulator-min-microvolt = <950000>; 
+		regulator-min-microvolt = <950000>;
 		regulator-max-microvolt = <1165000>;
 		regulator-enable-ramp-delay = <500>;
 	};

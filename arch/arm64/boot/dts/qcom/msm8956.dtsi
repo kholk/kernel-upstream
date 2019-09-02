@@ -1056,7 +1056,7 @@
 /* s6_level_ao, s2_level_ao ... wrong.....
 			power-domains = <&rpmpd MSM8956_VDDCX_VLVL>, <&rpmpd MSM8956_VDDMX_VLVL>;
 			power-domain-names = "cx", "mx";
-*/	
+*/
 			iommu-ctx@1f08000 {
 				compatible = "qcom,msm-smmu-v2-ctx";
 				reg = <0x1f08000 0x1000>;
@@ -1066,7 +1066,7 @@
 				qcom,iommu-sid-mask = <0x400>;
 				label = "gfx3d_user";
 			};
-	
+
 			iommu-ctx@1f09000 {
 				compatible = "qcom,msm-smmu-v2-ctx";
 				reg = <0x1f09000 0x1000>;
@@ -1078,7 +1078,7 @@
 				qcom,iommu-sid-mask = <0x401>;
 				label = "gfx3d_secure";
 			};
-	
+
 			iommu-ctx@1f0a000 {
 				compatible = "qcom,msm-smmu-v2-ctx";
 				reg = <0x1f0a000 0x1000>;
@@ -1300,7 +1300,7 @@
 		 *  === Secure contexts IRQs ===
 		 * ADSP ELF: 		254		ADSP sec pixel:		255
 		 * ADSP sec bitstream:	53
-		 * 
+		 *
 		 * Venus sec firmware:	54		Venus sec non-pixel:	58
 		 * Venus sec bitstream:	60		Venus sec pixel:	61
 		 * Venus encoder:	76
@@ -1315,9 +1315,9 @@
 		 * CPP:			111		JPEG Encoder 0:		112
 		 * VFE:			113		Venus non-secure:	114
 		 * MDP 0:		115		PRONTO Buffer:		116
-		 * 
+		 *
 		 * MSS NAV:		117
-		 * 
+		 *
 		 * IPA Shared:		118		IPA WLAN:		119
 		 * IPA uC:		120
 		 */
@@ -1677,7 +1677,7 @@
 				interrupt-parent = <&mdss>;
 				interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;
 
-				/* TODO: Handle TBU and TBU_RT clocks */ 
+				/* TODO: Handle TBU and TBU_RT clocks */
 				clocks = <&gcc GCC_MDSS_AHB_CLK>,
 					 <&gcc GCC_MDSS_AXI_CLK>,
 					 <&gcc GCC_MDSS_MDP_CLK>,
