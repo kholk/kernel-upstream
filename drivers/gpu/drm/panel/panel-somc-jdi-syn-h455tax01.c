@@ -346,15 +346,15 @@ poweroff_s1:
 }
 
 static const struct drm_display_mode default_mode = {
-	.clock = 149506,
+	.clock = 149506, //358815, //149506,
 	.hdisplay = 720,
 	.hsync_start = 720 + 20,
 	.hsync_end = 720 + 20 + 8,
 	.htotal = 720 + 20 + 8 + 8,
 	.vdisplay = 1280,
-	.vsync_start = 1280 + 2000,
-	.vsync_end = 1280 + 2000 + 8,
-	.vtotal = 1280 + 2000 + 8 + 8,
+	.vsync_start = 1280 + 1800,
+	.vsync_end = 1280 + 1800 + 8,
+	.vtotal = 1280 + 1800 + 8 + 8,
 	.vrefresh = 60,
 	//.flags = 0,
 };
