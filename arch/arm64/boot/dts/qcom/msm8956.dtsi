@@ -45,7 +45,7 @@
 		};
 
 		ext_region: ext_region@85b00000 {
-			reg = <0x0 0x85b00000 0x0 0xd00000>;
+			reg = <0x0 0x85b00000 0x0 0x500000>;
 			no-map;
 		};
 
@@ -59,6 +59,11 @@
 			no-map;
 		};
 
+		removed_mem: removed_mem@86400000 {
+			reg = <0x0 0x86400000 0x0 0x800000>;
+			no-map;
+		};
+
 		mpss_region: mpss@86c00000 {
 			reg = <0x0 0x86c00000 0x0 0x5600000>;
 			no-map;
@@ -69,7 +74,7 @@
 			no-map;
 		};
 
-		venus_region: venus@89900000 {
+		venus_region: venus@8da00000 {
 			reg = <0x0 0x8DA00000 0x0 0x2600000>;
 			no-map;
 		};
