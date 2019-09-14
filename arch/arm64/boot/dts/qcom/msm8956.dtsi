@@ -674,6 +674,8 @@
 			};
 		};
 
+		thermal_zones: thermal-zones {};
+
 		gcc: clock-controller@1800000 {
 			compatible = "qcom,gcc-8976";
 			#clock-cells = <1>;
@@ -2081,4 +2083,207 @@
 			};
 		};
 };
+
+&thermal_zones {
+	aoss0-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+
+		thermal-sensors = <&tsens0 0>;
+		trips {
+			aoss0_alert: trip-point@0 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+		};
+	};
+
+	mdm-core-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+
+		thermal-sensors = <&tsens0 1>;
+		trips {
+			modem_alert: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+		};
+	};
+
+	qdsp-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+
+		thermal-sensors = <&tsens0 2>;
+		trips {
+			qdsp_alert: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+		};
+	};
+
+	cam-isp-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+
+		thermal-sensors = <&tsens0 3>;
+		trips {
+			cam_isp_alert: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+		};
+	};
+
+	apc1-cpu0-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+		thermal-sensors = <&tsens0 4>;
+
+		trips {
+			cpu4_alert0: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+			cpu4_alert1: trip-point@1 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu4_crit: trip-point@2 {
+				temperature = <120000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+
+	apc1-cpu1-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+		thermal-sensors = <&tsens0 5>;
+
+		trips {
+			cpu5_alert0: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+			cpu5_alert1: trip-point@1 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu5_crit: trip-point@2 {
+				temperature = <120000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+
+	apc1-cpu2-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+		thermal-sensors = <&tsens0 6>;
+
+		trips {
+			cpu6_alert0: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+			cpu6_alert1: trip-point@1 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu6_crit: trip-point@2 {
+				temperature = <120000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+
+	apc1-cpu3-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+		thermal-sensors = <&tsens0 7>;
+
+		trips {
+			cpu7_alert0: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+			cpu7_alert1: trip-point@1 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu7_crit: trip-point@2 {
+				temperature = <120000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+
+	apc1-l2-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+		thermal-sensors = <&tsens0 8>;
+
+		trips {
+			l2_alert0: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+			l2_alert1: trip-point@1 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			l2_crit: trip-point@2 {
+				temperature = <120000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+
+	apc0-cpu0-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+		thermal-sensors = <&tsens0 9>;
+
+		trips {
+			cpu0_alert0: trip-point@0 {
+				temperature = <95000>;
+				hysteresis = <2000>;
+				type = "hot";
+			};
+			cpu0_alert1: trip-point@1 {
+				temperature = <105000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu0_crit: trip-point@2 {
+				temperature = <120000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+};
+
 #include "msm8956-pins.dtsi"
