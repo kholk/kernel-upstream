@@ -1082,6 +1082,8 @@ static void mdp5_crtc_vblank_irq(struct mdp_irq *irq, uint32_t irqstatus)
 
 	if (pending & PENDING_CURSOR)
 		drm_flip_work_commit(&mdp5_crtc->unref_cursor_work, priv->wq);
+
+	pr_err("VBLANK IRQ RECEIVED\n");
 }
 
 static void mdp5_crtc_err_irq(struct mdp_irq *irq, uint32_t irqstatus)
@@ -1095,7 +1097,7 @@ static void mdp5_crtc_pp_done_irq(struct mdp_irq *irq, uint32_t irqstatus)
 {
 	struct mdp5_crtc *mdp5_crtc = container_of(irq, struct mdp5_crtc,
 								pp_done);
-
+pr_err("PP DONE IRQ RECEIVED\n");
 	complete(&mdp5_crtc->pp_completion);
 }
 
@@ -1107,7 +1109,7 @@ static void mdp5_crtc_wait_for_pp_done(struct drm_crtc *crtc)
 	int ret;
 
 	ret = wait_for_completion_timeout(&mdp5_crtc->pp_completion,
-						msecs_to_jiffies(50));
+						msecs_to_jiffies(100));
 	if (ret == 0)
 		dev_warn(dev->dev, "pp done time out, lm=%d\n",
 			 mdp5_cstate->pipeline.mixer->lm);

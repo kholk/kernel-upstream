@@ -963,7 +963,7 @@
 			ahb-burst-config = <0>;
 			phy-names = "usb-phy";
 			phys = <&usb_hs_phy>;
-			status = "ok";
+			status = "disabled";
 			#reset-cells = <1>;
 
 			extcon = <&usb_vbus>, <&usb_id>;
