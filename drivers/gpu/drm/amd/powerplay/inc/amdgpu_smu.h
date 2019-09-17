@@ -429,7 +429,6 @@ struct smu_table_context
 	struct smu_table		*tables;
 	uint32_t			table_count;
 	struct smu_table		memory_pool;
-	uint16_t                        software_shutdown_temp;
 	uint8_t                         thermal_controller_type;
 	uint16_t			TDPODLimit;
 
@@ -452,6 +451,7 @@ struct smu_dpm_context {
 struct smu_power_gate {
 	bool uvd_gated;
 	bool vce_gated;
+	bool vcn_gated;
 };
 
 struct smu_power_context {
@@ -907,8 +907,6 @@ struct smu_funcs
 	((smu)->funcs->register_irq_handler ? (smu)->funcs->register_irq_handler(smu) : 0)
 #define smu_set_azalia_d3_pme(smu) \
 	((smu)->funcs->set_azalia_d3_pme ? (smu)->funcs->set_azalia_d3_pme((smu)) : 0)
-#define smu_get_uclk_dpm_states(smu, clocks_in_khz, num_states) \
-	((smu)->ppt_funcs->get_uclk_dpm_states ? (smu)->ppt_funcs->get_uclk_dpm_states((smu), (clocks_in_khz), (num_states)) : 0)
 #define smu_get_max_sustainable_clocks_by_dc(smu, max_clocks) \
 	((smu)->funcs->get_max_sustainable_clocks_by_dc ? (smu)->funcs->get_max_sustainable_clocks_by_dc((smu), (max_clocks)) : 0)
 #define smu_get_uclk_dpm_states(smu, clocks_in_khz, num_states) \
