@@ -66,6 +66,8 @@ static int pingpong_tearcheck_setup(struct drm_encoder *encoder,
 	}
 	vclks_line = vsync_clk_speed * 100 / total_lines_x100;
 
+	mdp5_write(mdp5_kms, REG_MDP5_PP_AUTOREFRESH_CONFIG(pp_id), 0x0);
+
 	cfg = MDP5_PP_SYNC_CONFIG_VSYNC_COUNTER_EN
 		| MDP5_PP_SYNC_CONFIG_VSYNC_IN_EN;
 	cfg |= MDP5_PP_SYNC_CONFIG_VSYNC_COUNT(vclks_line);
