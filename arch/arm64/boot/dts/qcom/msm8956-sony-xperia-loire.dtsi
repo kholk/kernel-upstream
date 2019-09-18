@@ -31,6 +31,27 @@
 			status = "ok";
 		};
 	};
+
+	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					status = "disabled";
+				};
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc/7824900.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1";
+					// WARNING: verity flag removed
+					fsmgr_flags = "wait";
+					status = "ok";
+				};
+			};
+		};
+	};
 };
 
 &soc {
