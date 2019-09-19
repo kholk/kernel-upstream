@@ -4345,17 +4345,24 @@ static int pci_quirk_amd_sb_acs(struct pci_dev *dev, u16 acs_flags)
 #endif
 }
 
+static const u16 pci_quirk_cavium_acs_ids[] = {
+	0xa180, 0xa170,		/* CN88xx family of devices */
+	0xaf84,			/* CN99xx family of devices */
+	0xb884,			/* CN11xxx family of devices */
+};
+
 static bool pci_quirk_cavium_acs_match(struct pci_dev *dev)
 {
-	/*
-	 * Effectively selects all downstream ports for whole ThunderX 1
-	 * family by 0xf800 mask (which represents 8 SoCs), while the lower
-	 * bits of device ID are used to indicate which subdevice is used
-	 * within the SoC.
-	 */
-	return (pci_is_pcie(dev) &&
-		(pci_pcie_type(dev) == PCI_EXP_TYPE_ROOT_PORT) &&
-		((dev->device & 0xf800) == 0xa000));
+	int i;
+
+	if (!pci_is_pcie(dev) || pci_pcie_type(dev) != PCI_EXP_TYPE_ROOT_PORT)
+		return false;
+
+	for (i = 0; i < ARRAY_SIZE(pci_quirk_cavium_acs_ids); i++)
+		if (pci_quirk_cavium_acs_ids[i] == dev->device)
+			return true;
+
+	return false;
 }
 
 static int pci_quirk_cavium_acs(struct pci_dev *dev, u16 acs_flags)
