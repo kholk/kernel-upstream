@@ -205,6 +205,8 @@
 	vdd-gfx-supply = <&pm8004_s5>;
 
 	regulator-always-on;
+	regulator-boot-on;
+	regulator-min-microvolt = <5>;
 
 	power-domains = <&rpmpd MSM8956_VDDCX_AO>, <&rpmpd MSM8956_VDDCX_AO>;
 	power-domain-names = "mx", "cx";

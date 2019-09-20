@@ -127,7 +127,7 @@ static const struct adreno_info gpulist[] = {
 		 * Increase inactive period to 250 to avoid bouncing
 		 * the GDSC which appears to make it grumpy
 		 */
-		.inactive_period = 250,
+		.inactive_period = 99250,
 		.init = a5xx_gpu_init,
 	}, {
 		.rev = ADRENO_REV(5, 3, 0, 2),
