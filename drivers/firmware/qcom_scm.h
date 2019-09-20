@@ -92,6 +92,9 @@ extern int __qcom_scm_restore_sec_cfg(struct device *dev, u32 device_id,
 #define QCOM_SCM_IOMMU_SECURE_PTBL_SIZE	3
 #define QCOM_SCM_IOMMU_SECURE_PTBL_INIT	4
 #define QCOM_SCM_IOMMU_SET_CP_POOL_SIZE	5
+#define QCOM_SCM_SVC_SMMU_PROGRAM	0x15
+#define QCOM_SCM_CONFIG_ERRATA1		0x3
+#define QCOM_SCM_CONFIG_ERRATA1_CLIENT_ALL	0x2
 extern int __qcom_scm_iommu_secure_ptbl_size(struct device *dev, u32 spare,
 					     size_t *size);
 extern int __qcom_scm_iommu_secure_ptbl_init(struct device *dev, u64 addr,
@@ -102,6 +105,8 @@ extern int __qcom_scm_iommu_set_cp_pool_size(struct device *dev, u32 spare,
 #define QCOM_SCM_IOMMU_PT_FORMAT	1
 extern int __qcom_scm_iommu_set_pt_format(struct device *dev, u32 sec_id,
 					  u32 ctx_num, u32 pt_fmt);
+extern int __qcom_scm_qsmmu500_wait_safe_toggle(struct device *dev,
+						bool enable);
 #define QCOM_MEM_PROT_ASSIGN_ID	0x16
 extern int  __qcom_scm_assign_mem(struct device *dev,
 				  phys_addr_t mem_region, size_t mem_sz,
