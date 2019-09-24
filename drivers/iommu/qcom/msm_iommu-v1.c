@@ -1,6 +1,6 @@
 /*
  * MSM Secure IOMMU v1/v2 Driver
- * Copyright (C) 2017-2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ * Copyright (C) 2017-2019, AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
  * May contain portions of code (c) 2012-2014, The Linux Foundation.
  *
@@ -15,6 +15,7 @@
  */
 
 #define pr_fmt(fmt)	KBUILD_MODNAME ": " fmt
+#include <linux/bitfield.h>
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -34,7 +35,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/notifier.h>
 #include <linux/iopoll.h>
-//#include <asm/sizes.h>
 #include <linux/dma-iommu.h>
 #include <linux/qcom_scm.h>
 #include <linux/amba/bus.h>
@@ -43,17 +43,19 @@
 
 #include "msm_iommu_priv.h"
 
-#include "msm_iommu_hw-v1.h"
+#include "../arm-smmu.h"
+
+#define QCOM_DUMMY_VAL -1
 
 /* Max ASID width is 8-bit */
 #define MAX_ASID	0xff
 
 /* Not on mainline kernels, for now */
-//#define QCOM_IOMMU_V1_USE_AARCH64 
+#define QCOM_IOMMU_V1_USE_AARCH64 
 
 #ifdef QCOM_IOMMU_V1_USE_AARCH64
- #define MMU_IAS 36
- #define MMU_OAS 40
+ #define MMU_IAS 48
+ #define MMU_OAS 48
  #define QCIOMMU_PGTABLE_OPS	ARM_64_LPAE_S1
 #else /* AArch32 LPAE */
  #define MMU_IAS 32
@@ -129,20 +131,71 @@ void msm_iommu_register_notify(struct notifier_block *nb)
 }
 EXPORT_SYMBOL(msm_iommu_register_notify);
 
-static void __sync_tlb(struct msm_iommu_drvdata *iommu_drvdata, int ctx,
-		       struct msm_iommu_priv *priv)
+static inline void
+iommu_writel(struct msm_iommu_drvdata *drvdata, unsigned reg, u32 val)
 {
-	void __iomem *base = iommu_drvdata->cb_base;
-	unsigned int val;
-	unsigned int res;
+	writel_relaxed(val, drvdata->base + reg);
+}
 
-	SET_TLBSYNC(base, ctx, 0);
+static inline u32
+iommu_readl(struct msm_iommu_drvdata *drvdata, unsigned reg)
+{
+	return readl_relaxed(drvdata->base + reg);
+}
+
+static inline void
+iommu_cb_writel(struct msm_iommu_drvdata *drvdata, unsigned reg,
+		int ctx, u32 val)
+{
+	writel_relaxed(val, drvdata->cb_base + reg + (ctx << 12));
+}
+
+static inline void
+iommu_cb_writeq(struct msm_iommu_drvdata *drvdata, unsigned reg,
+		int ctx, u64 val)
+{
+	writeq_relaxed(val, drvdata->cb_base + reg + (ctx << 12));
+}
+
+static inline u32
+iommu_cb_readl(struct msm_iommu_drvdata *drvdata, unsigned reg, int ctx)
+{
+	return readl_relaxed(drvdata->cb_base + reg + (ctx << 12));
+}
+
+static inline u64
+iommu_cb_readq(struct msm_iommu_drvdata *drvdata, unsigned reg, int ctx)
+{
+	return readq_relaxed(drvdata->cb_base + reg + (ctx << 12));
+}
+
+static void __sync_tlb(struct msm_iommu_drvdata *drvdata, int ctx)
+{
+	unsigned int val, res;
+
+	iommu_cb_writel(drvdata, ARM_SMMU_CB_TLBSYNC, ctx, QCOM_DUMMY_VAL);
 	/* No barrier needed due to read dependency */
 
-	res = readl_poll_timeout_atomic(CTX_REG(CB_TLBSTATUS, base, ctx), val,
-				(val & CB_TLBSTATUS_SACTIVE) == 0, 0, 1000000);
-	if (res)
+	res = readl_poll_timeout_atomic(
+			drvdata->cb_base + ARM_SMMU_CB_TLBSTATUS + (ctx << 12),
+			 val, (val & sTLBGSTATUS_GSACTIVE) == 0, 0, 1000000);
+	if (res) {
+		pr_err("Timeout waiting for TLB SYNC on IOMMU context.\n");
 		BUG();
+	}
+}
+
+static void msm_iommu_tlb_inv_context_s1(
+		struct msm_iommu_drvdata *iommu_drvdata, int ctx,
+		unsigned int asid)
+{
+	/*
+	 * The TLBI write may be relaxed, so ensure that PTEs cleared by the
+	 * current CPU are visible beforehand.
+	 */
+	wmb();
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_S1_TLBIASID, ctx, asid);
+	__sync_tlb(iommu_drvdata, ctx);
 }
 
 static int __flush_iotlb(struct iommu_domain *domain)
@@ -162,9 +215,9 @@ static int __flush_iotlb(struct iommu_domain *domain)
 		if (ret)
 			goto fail;
 
-		SET_TLBIASID(iommu_drvdata->cb_base, ctx_drvdata->num,
-			     base_priv->asid);
-		__sync_tlb(iommu_drvdata, ctx_drvdata->num, base_priv);
+		msm_iommu_tlb_inv_context_s1(iommu_drvdata, ctx_drvdata->num,
+					     base_priv->asid);
+
 		__disable_clocks(iommu_drvdata);
 	}
 fail:
@@ -180,8 +233,6 @@ static void msm_iommu_tlb_sync(void *cookie)
 	int ret = 0;
 
 	list_for_each_entry(ctx_drvdata, &base_priv->list_attached, attached_elm) {
-		BUG_ON(!ctx_drvdata->pdev || !ctx_drvdata->pdev->dev.parent);
-
 		iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
 		BUG_ON(!iommu_drvdata);
 
@@ -189,7 +240,7 @@ static void msm_iommu_tlb_sync(void *cookie)
 		if (ret)
 			goto fail;
 
-		__sync_tlb(iommu_drvdata, ctx_drvdata->num, base_priv);
+		__sync_tlb(iommu_drvdata, ctx_drvdata->num);
 
 		__disable_clocks(iommu_drvdata);
 	}
@@ -211,33 +262,34 @@ static void msm_iommu_tlb_flush_range_nosync(unsigned long iova, size_t size,
 {
 	struct iommu_domain *domain = cookie;
 	struct msm_iommu_priv *base_priv = to_msm_priv(domain);
-	struct msm_iommu_drvdata *iommu_drvdata;
+	struct msm_iommu_drvdata *drvdata;
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	unsigned long va = iova;
-	int ret = 0;
+	int reg, ret = 0;
+
+	reg = leaf ? ARM_SMMU_CB_S1_TLBIVAL : ARM_SMMU_CB_S1_TLBIVA;
 
 	list_for_each_entry(ctx_drvdata, &base_priv->list_attached, attached_elm) {
 		BUG_ON(!ctx_drvdata->pdev || !ctx_drvdata->pdev->dev.parent);
 
-		iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
-		BUG_ON(!iommu_drvdata);
+		drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
+		BUG_ON(!drvdata);
 
-		ret = __enable_clocks(iommu_drvdata);
+		ret = __enable_clocks(drvdata);
 		if (ret)
 			goto fail;
-
-		va &= ~12UL;
+/*
+		va = (va >> 12) << 12;
 		va |= base_priv->asid;
+*/
+		/* NOTE: FOR AARCH64 it is: */
+			va >>= 12;
+			va |= base_priv->asid << 48;
 
-		if (leaf) {
-			SET_TLBIVAL(iommu_drvdata->cb_base,
-						ctx_drvdata->num, va);
-		} else {
-			SET_TLBIVA(iommu_drvdata->cb_base,
-						ctx_drvdata->num, va);
-		}
 
-		__disable_clocks(iommu_drvdata);
+		iommu_cb_writel(drvdata, reg, ctx_drvdata->num, va);
+
+		__disable_clocks(drvdata);
 	}
 fail:
 	if (ret)
@@ -251,57 +303,39 @@ static const struct iommu_gather_ops msm_iommu_gather_ops = {
 	.tlb_sync	= msm_iommu_tlb_sync,
 };
 
-int msm_iommu_sec_program_iommu(struct msm_iommu_drvdata *drvdata,
-			struct msm_iommu_ctx_drvdata *ctx_drvdata)
-{
-	int ret;
-
-	if (drvdata->smmu_local_base) {
-		writel_relaxed(0xFFFFFFFF,
-			       drvdata->smmu_local_base + SMMU_INTR_SEL_NS);
-		mb();
-	}
-
-	ret = qcom_scm_restore_sec_cfg(drvdata->sec_id, ctx_drvdata->num);
-	if (ret) {
-		pr_err("scm call IOMMU_SECURE_CFG failed\n");
-		return ret;
-	}
-
-	return ret;
-}
-
 static void __reset_context(struct msm_iommu_drvdata *iommu_drvdata, int ctx)
 {
-	void __iomem *base = iommu_drvdata->cb_base;
-
 	/* Don't set ACTLR to zero because if context bank is in
 	 * bypass mode (say after iommu_detach), still this ACTLR
 	 * value matters for micro-TLB caching.
 	 */
 	if (iommu_drvdata->model != MMU_500)
-		SET_ACTLR(base, ctx, 0);
+		iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_ACTLR, ctx, 0);
 
-	SET_FAR(base, ctx, 0);
-	SET_FSRRESTORE(base, ctx, 0);
-	SET_NMRR(base, ctx, 0);
-	SET_PAR(base, ctx, 0);
-	SET_PRRR(base, ctx, 0);
-	SET_SCTLR(base, ctx, 0);
-	SET_TTBCR(base, ctx, 0);
-	SET_TTBR0(base, ctx, 0);
-	SET_TTBR1(base, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_FAR, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_FSR, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_S1_MAIR1, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_PAR, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_S1_MAIR0, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_SCTLR, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TCR2, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TCR, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TTBR0, ctx, 0);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TTBR1, ctx, 0);
+
+	/* Should we TLBSYNC there instead? */
 	mb();
 }
+
 
 static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 			      struct msm_iommu_ctx_drvdata *ctx_drvdata,
 			      struct msm_iommu_priv *priv)
 {
-	void __iomem *cb_base = iommu_drvdata->cb_base;
 	unsigned int ctx = ctx_drvdata->num;
-	u64 tcr;
-//	u64 ttbr1_conf = 0;
+	u32 reg, tcr[2];
+	u64 ttbr[2];
+
 	__reset_context(iommu_drvdata, ctx);
 
 	priv->asid = ctx_drvdata->num;
@@ -314,39 +348,29 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 	}
 #endif
 
-	tcr = priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr;
-/*
-	ttbr1_conf = (1 << 23);
-	ttbr1_conf |= (7ULL << (15+32));
-
-priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr |= (7ULL << (15+32));
-*/
+	tcr[0] = priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr;
+	tcr[1] = priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32;
+	tcr[1] |= FIELD_PREP(TCR2_SEP, TCR2_SEP_UPSTREAM);
 #ifdef QCOM_IOMMU_V1_USE_AARCH64
-	SET_TTBCR(iommu_drvdata->cb_base, ctx,
-			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr);
-
-	SET_TCR2(iommu_drvdata->cb_base, ctx,
-			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32);
-#else /* AArch32 LPAE */
-	SET_CB_TCR2_SEP(iommu_drvdata->cb_base, ctx,
-			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32);
-
-	SET_CB_TTBCR_EAE(iommu_drvdata->cb_base, ctx, 1);
+	tcr[1] |= TCR2_AS;
+#else
+//	tcr[0] |= FIELD_PREP(0x1, 31); /* ?!?!?!?!??! is that set by the lpae s1 stuff already ?!?!?!?!??! */
 #endif
 
-	SET_TTBR0(iommu_drvdata->cb_base, ctx,
-			priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[0] |
-			((u64)priv->asid << CB_TTBR0_ASID_SHIFT));
+	ttbr[0] = priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[0];
+	ttbr[0] |= FIELD_PREP(TTBRn_ASID, priv->asid);
+	ttbr[1] = priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[1];
+	ttbr[1] |= FIELD_PREP(TTBRn_ASID, priv->asid);
 
-	SET_TTBR1(iommu_drvdata->cb_base, ctx,
-			priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[1] |
-			((u64)priv->asid << CB_TTBR1_ASID_SHIFT));
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TCR2, ctx, tcr[1]);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TCR, ctx, tcr[0]);
 
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TTBR0, ctx, ttbr[0]);
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_TTBR1, ctx, ttbr[1]);
 
-	SET_CB_MAIR0(iommu_drvdata->cb_base, ctx,
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_S1_MAIR0, ctx,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.mair[0]);
-
-	SET_CB_MAIR1(iommu_drvdata->cb_base, ctx,
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_S1_MAIR1, ctx,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.mair[1]);
 
 	/* Ensure that ASID assignment has completed before we use
@@ -354,25 +378,10 @@ priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr |= (7ULL << (15+32));
 	 * both these registers are separated by more than 1KB. */
 	mb();
 
-#ifdef QCOM_IOMMU_V1_USE_AARCH64
-	/* Disable stall unconditionally for AArch64 addressing */
-	SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
-	SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
-#else /* AArch32 LPAE */
-//	if (priv->attributes & (1 << DOMAIN_ATTR_CB_STALL_DISABLE)) {
-		SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
-		SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
-//	}
-#endif
+	reg = SCTLR_CFIE | SCTLR_CFRE | SCTLR_AFE | SCTLR_TRE;
+	reg |= SCTLR_S1_ASIDPNE | SCTLR_HUPCF | SCTLR_M;
 
-	SET_CB_SCTLR_CFIE(cb_base, ctx, 1);
-	SET_CB_SCTLR_CFRE(cb_base, ctx, 1);
-	SET_CB_SCTLR_AFE(cb_base, ctx, 1);
-	SET_CB_SCTLR_TRE(cb_base, ctx, 1);
-	SET_CB_SCTLR_ASIDPNE(cb_base, ctx, 1);
-	SET_CB_SCTLR_M(cb_base, ctx, 1);
-
-	mb();
+	iommu_cb_writel(iommu_drvdata, ARM_SMMU_CB_SCTLR, ctx, reg);
 }
 
 static struct msm_iommu_master *msm_iommu_find_master(struct device *dev)
@@ -459,7 +468,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	int ret = 0;
 	int is_secure;
 	bool secure_ctx;
-	unsigned long flags, pgtable_quirks = 0;
+	unsigned long flags;
 pr_err("attach_dev\n");
 
 	if (!fwspec->iommu_priv) {
@@ -473,8 +482,6 @@ pr_err("attach_dev\n");
 	}
 
 	mutex_lock(&priv->init_mutex);
-
-
 
 	master = fwspec->iommu_priv;// dev->archdata.iommu;
 
@@ -518,27 +525,25 @@ pr_err("attach_dev\n");
 
 	/* We can only do this once */
 	if (!iommu_drvdata->ctx_attach_count) {
-		ret = msm_iommu_sec_program_iommu(iommu_drvdata, ctx_drvdata);
-		if (ret)
+		ret = qcom_scm_restore_sec_cfg(iommu_drvdata->sec_id,
+					       ctx_drvdata->num);
+		if (ret) {
+			pr_err("scm call IOMMU_SECURE_CFG failed\n");
 			goto unlock;
+		}
 	}
-
-	//pgtable_quirks |= IO_PGTABLE_QUIRK_TLBI_ON_MAP; // Do we need this? 
 
 	pr_err("%s: Assigning pagetable\n", dev_name(&ctx_drvdata->pdev->dev));
 
-	//iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
-
 	/* Make sure the domain is initialized */
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
-		//.quirks		= IO_PGTABLE_QUIRK_NO_DMA,
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
 		.ias		= MMU_IAS,
 		.oas		= MMU_OAS,
 		.tlb		= &msm_iommu_gather_ops,
 		.iommu_dev	= &ctx_drvdata->pdev->dev,
 	};
-	domain->geometry.aperture_start = 0;
+	domain->geometry.aperture_start = SZ_16M;
 	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
 
@@ -556,8 +561,6 @@ pr_err("attach_dev\n");
 	priv->pgtbl_ops = pgtbl_ops;
 	spin_unlock_irqrestore(&priv->pgtbl_lock, flags);
 
-//goto add_domain;
-
 	secure_ctx = !!(ctx_drvdata->secure_context > 0);
 	if (secure_ctx) {
 		dev_dbg(dev, "Detected secure context.\n");
@@ -568,11 +571,10 @@ pr_err("progctx\n");
 	__program_context(iommu_drvdata, ctx_drvdata, priv);
 
 	/* Ensure TLB is clear */
-	if (iommu_drvdata->model != MMU_500) {
-		SET_TLBIASID(iommu_drvdata->cb_base, ctx_drvdata->num,
-			     ctx_drvdata->asid);
-		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
-	}
+	if (iommu_drvdata->model != MMU_500)
+		msm_iommu_tlb_inv_context_s1(iommu_drvdata, ctx_drvdata->num,
+					     ctx_drvdata->asid);
+
 pr_err("clkdisable\n");
 	__disable_clocks(iommu_drvdata);
 
@@ -641,11 +643,9 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 	if (ret)
 		goto unlock;
 
-	if (iommu_drvdata->model == MMU_500) {
-		SET_TLBIASID(iommu_drvdata->cb_base, ctx_drvdata->num,
-			     ctx_drvdata->asid);
-		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
-	}
+	if (iommu_drvdata->model == MMU_500)
+		msm_iommu_tlb_inv_context_s1(iommu_drvdata, ctx_drvdata->num,
+					     ctx_drvdata->asid);
 
 	ctx_drvdata->asid = -1;
 
@@ -736,7 +736,7 @@ static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 	 */
 	if (!priv)
 		return 0;
-pr_err("iova_to_phys\n");
+
 	spin_lock_irqsave(&priv->pgtbl_lock, flags);
 	ret = priv->pgtbl_ops->iova_to_phys(priv->pgtbl_ops, va);
 	spin_unlock_irqrestore(&priv->pgtbl_lock, flags);
@@ -819,132 +819,11 @@ static struct iommu_group *msm_iommu_device_group(struct device *dev)
 	return group;
 }
 
-static inline void print_ctx_mem_attr_regs(struct msm_iommu_context_reg regs[])
-{
-	pr_err("MAIR0   = %08x    MAIR1   = %08x\n",
-		 regs[DUMP_REG_MAIR0].val, regs[DUMP_REG_MAIR1].val);
-}
-
-void print_ctx_regs(struct msm_iommu_context_reg regs[])
-{
-	uint32_t fsr = regs[DUMP_REG_FSR].val;
-	u64 ttbr;
-	enum dump_reg iter;
-
-	pr_err("FAR    = %016llx\n",
-		COMBINE_DUMP_REG(
-			regs[DUMP_REG_FAR1].val,
-			regs[DUMP_REG_FAR0].val));
-	pr_err("PAR    = %016llx\n",
-		COMBINE_DUMP_REG(
-			regs[DUMP_REG_PAR1].val,
-			regs[DUMP_REG_PAR0].val));
-	pr_err("FSR    = %08x [%s%s%s%s%s%s%s%s%s]\n", fsr,
-			(fsr & 0x02) ? "TF " : "",
-			(fsr & 0x04) ? "AFF " : "",
-			(fsr & 0x08) ? "PF " : "",
-			(fsr & 0x10) ? "EF " : "",
-			(fsr & 0x20) ? "TLBMCF " : "",
-			(fsr & 0x40) ? "TLBLKF " : "",
-			(fsr & 0x80) ? "MHF " : "",
-			(fsr & 0x40000000) ? "SS " : "",
-			(fsr & 0x80000000) ? "MULTI " : "");
-
-	pr_err("FSYNR0 = %08x    FSYNR1 = %08x\n",
-		 regs[DUMP_REG_FSYNR0].val, regs[DUMP_REG_FSYNR1].val);
-
-	ttbr = COMBINE_DUMP_REG(regs[DUMP_REG_TTBR0_1].val,
-				regs[DUMP_REG_TTBR0_0].val);
-	if (regs[DUMP_REG_TTBR0_1].valid)
-		pr_err("TTBR0  = %016llx\n", ttbr);
-	else
-		pr_err("TTBR0  = %016llx (32b)\n", ttbr);
-
-	ttbr = COMBINE_DUMP_REG(regs[DUMP_REG_TTBR1_1].val,
-				regs[DUMP_REG_TTBR1_0].val);
-
-	if (regs[DUMP_REG_TTBR1_1].valid)
-		pr_err("TTBR1  = %016llx\n", ttbr);
-	else
-		pr_err("TTBR1  = %016llx (32b)\n", ttbr);
-
-	pr_err("SCTLR  = %08x    ACTLR  = %08x\n",
-		 regs[DUMP_REG_SCTLR].val, regs[DUMP_REG_ACTLR].val);
-	pr_err("CBAR  = %08x    CBFRSYNRA  = %08x\n",
-		regs[DUMP_REG_CBAR_N].val, regs[DUMP_REG_CBFRSYNRA_N].val);
-	print_ctx_mem_attr_regs(regs);
-
-	for (iter = DUMP_REG_FIRST; iter < MAX_DUMP_REGS; ++iter)
-		if (!regs[iter].valid)
-			pr_err("NOTE: Value actually unknown for %s\n",
-				dump_regs_tbl[iter].name);
-}
-
-static void __print_ctx_regs(struct msm_iommu_drvdata *drvdata, int ctx,
-					unsigned int fsr)
-{
-	void __iomem *base = drvdata->base;
-	void __iomem *cb_base = drvdata->cb_base;
-	bool is_secure = drvdata->sec_id != -1;
-
-	struct msm_iommu_context_reg regs[MAX_DUMP_REGS];
-	unsigned int i;
-	memset(regs, 0, sizeof(regs));
-
-	for (i = DUMP_REG_FIRST; i < MAX_DUMP_REGS; ++i) {
-		struct msm_iommu_context_reg *r = &regs[i];
-		unsigned long regaddr = dump_regs_tbl[i].reg_offset;
-		if (is_secure &&
-			dump_regs_tbl[i].dump_reg_type != DRT_CTX_REG) {
-			r->valid = 0;
-			continue;
-		}
-		r->valid = 1;
-		switch (dump_regs_tbl[i].dump_reg_type) {
-		case DRT_CTX_REG:
-			r->val = GET_CTX_REG(regaddr, cb_base, ctx);
-			break;
-		case DRT_GLOBAL_REG:
-			r->val = GET_GLOBAL_REG(regaddr, base);
-			break;
-		case DRT_GLOBAL_REG_N:
-			r->val = GET_GLOBAL_REG_N(regaddr, ctx, base);
-			break;
-		default:
-			pr_info("Unknown dump_reg_type...\n");
-			r->valid = 0;
-			break;
-		}
-	}
-	print_ctx_regs(regs);
-}
-
-static void print_global_regs(void __iomem *base, unsigned int gfsr)
-{
-	pr_err("GFAR    = %016llx\n", GET_GFAR(base));
-
-	pr_err("GFSR    = %08x [%s%s%s%s%s%s%s%s%s%s]\n", gfsr,
-			(gfsr & 0x01) ? "ICF " : "",
-			(gfsr & 0x02) ? "USF " : "",
-			(gfsr & 0x04) ? "SMCF " : "",
-			(gfsr & 0x08) ? "UCBF " : "",
-			(gfsr & 0x10) ? "UCIF " : "",
-			(gfsr & 0x20) ? "CAF " : "",
-			(gfsr & 0x40) ? "EF " : "",
-			(gfsr & 0x80) ? "PF " : "",
-			(gfsr & 0x40000000) ? "SS " : "",
-			(gfsr & 0x80000000) ? "MULTI " : "");
-
-	pr_err("GFSYNR0	= %08x\n", GET_GFSYNR0(base));
-	pr_err("GFSYNR1	= %08x\n", GET_GFSYNR1(base));
-	pr_err("GFSYNR2	= %08x\n", GET_GFSYNR2(base));
-}
-
 irqreturn_t msm_iommu_global_fault_handler(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
 	struct msm_iommu_drvdata *drvdata;
-	unsigned int gfsr;
+	u32 gfsr;
 	int ret;
 
 	mutex_lock(&msm_iommu_lock);
@@ -965,11 +844,28 @@ irqreturn_t msm_iommu_global_fault_handler(int irq, void *dev_id)
 		goto fail;
 	}
 
-	gfsr = GET_GFSR(drvdata->base);
+	gfsr = iommu_readl(drvdata, ARM_SMMU_GR0_sGFSR);
 	if (gfsr) {
 		pr_err("Unexpected %s global fault !!\n", drvdata->name);
-		print_global_regs(drvdata->base, gfsr);
-		SET_GFSR(drvdata->base, gfsr);
+		pr_err("GFSR    = %08x [%s%s%s%s%s%s%s%s%s%s]\n", gfsr,
+			(gfsr & 0x01) ? "ICF " : "",
+			(gfsr & 0x02) ? "USF " : "",
+			(gfsr & 0x04) ? "SMCF " : "",
+			(gfsr & 0x08) ? "UCBF " : "",
+			(gfsr & 0x10) ? "UCIF " : "",
+			(gfsr & 0x20) ? "CAF " : "",
+			(gfsr & 0x40) ? "EF " : "",
+			(gfsr & 0x80) ? "PF " : "",
+			(gfsr & 0x40000000) ? "SS " : "",
+			(gfsr & 0x80000000) ? "MULTI " : "");
+
+		pr_err("GFSYNR0	= %08x\n",
+				iommu_readl(drvdata, ARM_SMMU_GR0_sGFSYNR0));
+		pr_err("GFSYNR1	= %08x\n",
+				iommu_readl(drvdata, ARM_SMMU_GR0_sGFSYNR1));
+		pr_err("GFSYNR2	= %08x\n",
+				iommu_readl(drvdata, ARM_SMMU_GR0_sGFSYNR2));
+		iommu_writel(drvdata, ARM_SMMU_GR0_sGFSR, gfsr);
 		ret = IRQ_HANDLED;
 	} else
 		ret = IRQ_NONE;
@@ -986,19 +882,15 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 	struct platform_device *pdev = dev_id;
 	struct msm_iommu_drvdata *drvdata;
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
-	unsigned int fsr;
-	int ret;
 	u64 faulty_iova = 0;
+	u32 fsr, fsynr;
+	int ctx, ret;
 
 	mutex_lock(&msm_iommu_lock);
 
-	BUG_ON(!pdev);
-
 	drvdata = dev_get_drvdata(pdev->dev.parent);
-	BUG_ON(!drvdata);
-
 	ctx_drvdata = dev_get_drvdata(&pdev->dev);
-	BUG_ON(!ctx_drvdata);
+	ctx = ctx_drvdata->num;
 
 	ret = __enable_clocks(drvdata);
 	if (ret) {
@@ -1006,35 +898,39 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 		goto fail;
 	}
 
-	fsr = GET_FSR(drvdata->cb_base, ctx_drvdata->num);
-	if (fsr) {
-		if (!ctx_drvdata->attached_domain) {
-			pr_err("Bad domain in interrupt handler\n");
-			ret = -ENOSYS;
-		} else {
-			faulty_iova =
-				GET_FAR(drvdata->cb_base, ctx_drvdata->num);
-			ret = report_iommu_fault(ctx_drvdata->attached_domain,
-				&ctx_drvdata->pdev->dev,
-				faulty_iova, 0);
-
-		}
-		if (ret == -ENOSYS) {
-			pr_err("Unexpected IOMMU page fault!\n");
-			pr_err("name = %s\n", drvdata->name);
-			pr_err("context = %s (%d)\n", ctx_drvdata->name,
-							ctx_drvdata->num);
-			pr_err("Interesting registers:\n");
-			__print_ctx_regs(drvdata,
-					ctx_drvdata->num, fsr);
-		}
-
-		if (ret != -EBUSY)
-			SET_FSR(drvdata->cb_base, ctx_drvdata->num, fsr);
-		ret = IRQ_HANDLED;
-	} else
+	fsr = iommu_cb_readl(drvdata, ARM_SMMU_CB_FSR, ctx);
+	if (!(fsr & FSR_FAULT)) {
 		ret = IRQ_NONE;
+		goto out;
+	}
 
+	faulty_iova = iommu_cb_readq(drvdata, ARM_SMMU_CB_FAR, ctx);
+
+	if (!ctx_drvdata->attached_domain) {
+		pr_err("Bad domain in interrupt handler\n");
+		ret = -ENOSYS;
+	} else {
+		ret = report_iommu_fault(ctx_drvdata->attached_domain,
+			&ctx_drvdata->pdev->dev,
+			faulty_iova, 0);
+	}
+	if (ret == -ENOSYS) {
+		fsynr = iommu_cb_readl(drvdata, ARM_SMMU_CB_FSYNR0, ctx);
+
+		pr_err("Unexpected IOMMU page fault!\n");
+		pr_err("name = %s\n", drvdata->name);
+		pr_err("context = %s (%d)\n", ctx_drvdata->name,
+						ctx_drvdata->num);
+		pr_err("fsr=0x%x, iova=0x%08llx, fsynr=0x%x, cb=%d\n",
+						fsr, faulty_iova, fsynr, ctx);
+	}
+
+	if (ret != -EBUSY)
+		iommu_cb_writel(drvdata, ARM_SMMU_CB_FSR,
+				ctx_drvdata->num, fsr);
+	ret = IRQ_HANDLED;
+
+out:
 	__disable_clocks(drvdata);
 fail:
 	mutex_unlock(&msm_iommu_lock);
@@ -1042,30 +938,9 @@ fail:
 	return ret;
 }
 
-static void msm_iommu_build_dump_regs_table(void)
-{
-	DUMP_REG_INIT(DUMP_REG_FAR0,	CB_FAR,       1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_FAR1,	CB_FAR + 4,   1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_PAR0,	CB_PAR,       1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_PAR1,	CB_PAR + 4,   1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_FSR,	CB_FSR,       1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_FSYNR0,	CB_FSYNR0,    1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_FSYNR1,	CB_FSYNR1,    1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_TTBR0_0,	CB_TTBR0,     1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_TTBR0_1,	CB_TTBR0 + 4, 0, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_TTBR1_0,	CB_TTBR1,     1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_TTBR1_1,	CB_TTBR1 + 4, 0, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_SCTLR,	CB_SCTLR,     1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_ACTLR,	CB_ACTLR,     1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_PRRR,	CB_PRRR,      1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_NMRR,	CB_NMRR,      1, DRT_CTX_REG);
-	DUMP_REG_INIT(DUMP_REG_CBAR_N,	CBAR,         1, DRT_GLOBAL_REG_N);
-	DUMP_REG_INIT(DUMP_REG_CBFRSYNRA_N, CBFRSYNRA, 1, DRT_GLOBAL_REG_N);
-}
-
 static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 {
-	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
+	//struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
 	struct msm_iommu_drvdata *iommu_drvdata;
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	struct platform_device *pdev, *ctx_pdev;
@@ -1133,13 +1008,6 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	return iommu_fwspec_add_ids(dev, &ctx_drvdata->num, 1);
 }
 
-#if 0
-static int msm_iommu_dma_supported(struct iommu_domain *domain,
-				  struct device *dev, u64 mask)
-{
-	return ((1ULL << 32) - 1) < mask ? 0 : 1;
-}
-#endif
 static bool msm_iommu_capable(enum iommu_cap cap)
 {
 	switch (cap) {
@@ -1168,7 +1036,6 @@ static struct iommu_ops msm_iommu_ops = {
 	.remove_device = msm_iommu_remove_device,
 	.device_group = msm_iommu_device_group,
 	.pgsize_bitmap = (SZ_4K | SZ_64K | SZ_2M | SZ_32M | SZ_1G),
-	//.pgsize_bitmap	= SZ_4K | SZ_64K | SZ_1M | SZ_16M,
 	.of_xlate = msm_iommu_of_xlate,
 };
 
@@ -1193,15 +1060,6 @@ int msm_iommu_init(struct msm_iommu_drvdata *drvdata)
 	if (!iommu_present(&amba_bustype))
 		bus_set_iommu(&amba_bustype, &msm_iommu_ops);
 #endif
-
-#if 0 //def CONFIG_PCI
-	if (!iommu_present(&pci_bus_type))
-		bus_set_iommu(&pci_bus_type, &msm_iommu_ops);
-#endif
-
-	msm_iommu_build_dump_regs_table();
-
-	//list_add(*drvdata, &iommu_drvdatas);
 
 	return 0;
 }
