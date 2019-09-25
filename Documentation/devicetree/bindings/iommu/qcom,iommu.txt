@@ -38,6 +38,7 @@ to non-secure vs secure interrupt line.
         - "qcom,msm-iommu-v1-sec" : secure context bank
   - reg            : Base address and size of context bank within the iommu
   - interrupts     : The context fault irq.
+  - qcom,ctx-num   : The number associated to the context bank
 
 ** Optional properties:
 
