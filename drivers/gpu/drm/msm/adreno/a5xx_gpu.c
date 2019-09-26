@@ -505,8 +505,6 @@ static int a5xx_zap_shader_init(struct msm_gpu *gpu)
 static int a5xx_hw_init(struct msm_gpu *gpu)
 {
 	struct adreno_gpu *adreno_gpu = to_adreno_gpu(gpu);
-	u32 meq_thresh, merciu_sz, roq_thresh_1, roq_thresh_2, eco_cntl;
-	u32 cur_eco_cnt;
 	int ret;
 
 	gpu_write(gpu, REG_A5XX_VBIF_ROUND_ROBIN_QOS_ARB, 0x00000003);
@@ -573,31 +571,24 @@ static int a5xx_hw_init(struct msm_gpu *gpu)
 		0x00100000 + adreno_gpu->gmem - 1);
 	gpu_write(gpu, REG_A5XX_UCHE_GMEM_RANGE_MAX_HI, 0x00000000);
 
-	/* Values for the majority of the models */
-	meq_thresh = 0x40;
-	merciu_sz = 0x40;
-	roq_thresh_2 = 0x80000060;
-	roq_thresh_1 = 0x40201B16;
-	eco_cntl = (0x400 << 11 | 0x300 << 22);
-
-	/* model specific overrides */
 	if (adreno_is_a510(adreno_gpu)) {
-		meq_thresh = 0x20;
-		merciu_sz = 0x20;
-		roq_thresh_2 = 0x40000030;
-		roq_thresh_1 = 0x20100D0A;
-		eco_cntl = (0x200 << 11 | 0x200 << 22);
+		gpu_write(gpu, REG_A5XX_CP_MEQ_THRESHOLDS, 0x20);
+		gpu_write(gpu, REG_A5XX_CP_MERCIU_SIZE, 0x20);
+		gpu_write(gpu, REG_A5XX_CP_ROQ_THRESHOLDS_2, 0x40000030);
+		gpu_write(gpu, REG_A5XX_CP_ROQ_THRESHOLDS_1, 0x20100D0A);
+		gpu_write(gpu, REG_A5XX_PC_DBG_ECO_CNTL,
+			  (0x200 << 11 | 0x200 << 22));
+	} else {
+		gpu_write(gpu, REG_A5XX_CP_MEQ_THRESHOLDS, 0x40);
+		if (adreno_is_a530(adreno_gpu))
+			gpu_write(gpu, REG_A5XX_CP_MERCIU_SIZE, 0x40);
+		if (adreno_is_a540(adreno_gpu))
+			gpu_write(gpu, REG_A5XX_CP_MERCIU_SIZE, 0x400);
+		gpu_write(gpu, REG_A5XX_CP_ROQ_THRESHOLDS_2, 0x80000060);
+		gpu_write(gpu, REG_A5XX_CP_ROQ_THRESHOLDS_1, 0x40201B16);
+		gpu_write(gpu, REG_A5XX_PC_DBG_ECO_CNTL,
+			  (0x400 << 11 | 0x300 << 22));
 	}
-
-	if (adreno_is_a540(adreno_gpu))
-		merciu_sz = 0x400;
-
-	gpu_write(gpu, REG_A5XX_CP_MEQ_THRESHOLDS, meq_thresh);
-	gpu_write(gpu, REG_A5XX_CP_MERCIU_SIZE, merciu_sz);
-	gpu_write(gpu, REG_A5XX_CP_ROQ_THRESHOLDS_2, roq_thresh_2);
-	gpu_write(gpu, REG_A5XX_CP_ROQ_THRESHOLDS_1, roq_thresh_1);
-
-	gpu_write(gpu, REG_A5XX_PC_DBG_ECO_CNTL, eco_cntl);
 
 	if (adreno_gpu->info->quirks & ADRENO_QUIRK_TWO_PASS_USE_WFI)
 		gpu_rmw(gpu, REG_A5XX_PC_DBG_ECO_CNTL, 0, (1 << 8));
@@ -620,11 +611,8 @@ static int a5xx_hw_init(struct msm_gpu *gpu)
 	 *  bit[11] of RB_DBG_ECO_CNTL need to be set to 0, default is 1
 	 *  (disable). For older A510 version this bit is unused.
 	 */
-	if (adreno_is_a510(adreno_gpu)) {
-		cur_eco_cnt = gpu_read(gpu, REG_A5XX_RB_DBG_ECO_CNTL);
-		cur_eco_cnt &= ~(1 << 11);
-		gpu_write(gpu, REG_A5XX_RB_DBG_ECO_CNTL, cur_eco_cnt);
-	}
+	if (adreno_is_a510(adreno_gpu))
+		gpu_rmw(gpu, REG_A5XX_RB_DBG_ECO_CNTL, (1 << 11), 0);
 
 	/* Enable HWCG */
 	a5xx_set_hwcg(gpu, true);
@@ -757,11 +745,6 @@ static int a5xx_hw_init(struct msm_gpu *gpu)
 	 * guessed wrong then access to the RBBM_SECVID_TRUST_CNTL register will
 	 * be blocked and a permissions violation will soon follow.
 	 */
-	if (adreno_is_a510(adreno_gpu)) {
-		gpu_write(gpu, REG_A5XX_RBBM_SECVID_TRUST_CNTL, 0x0);
-		goto skip_zap;
-	}
-
 	ret = a5xx_zap_shader_init(gpu);
 	if (!ret) {
 		OUT_PKT7(gpu->rb[0], CP_SET_SECURE_MODE, 1);
@@ -777,7 +760,6 @@ static int a5xx_hw_init(struct msm_gpu *gpu)
 		gpu_write(gpu, REG_A5XX_RBBM_SECVID_TRUST_CNTL, 0x0);
 	}
 
-skip_zap:
 	/* Last step - yield the ringbuffer */
 	a5xx_preempt_start(gpu);
 
@@ -1124,7 +1106,7 @@ static int a5xx_pm_resume(struct msm_gpu *gpu)
 		gpu_write(gpu, REG_A5XX_RBBM_CLOCK_CNTL, 0x00000055);
 		a5xx_set_hwcg(gpu, true);
 		/* Turn on sp_input_clk at HM level */
-		gpu_rmw(gpu, REG_A5XX_RBBM_CLOCK_CNTL, 0xFF, 0);
+		gpu_rmw(gpu, REG_A5XX_RBBM_CLOCK_CNTL, 0xff, 0);
 		return 0;
 	}
 
@@ -1157,16 +1139,16 @@ static int a5xx_pm_resume(struct msm_gpu *gpu)
 static int a5xx_pm_suspend(struct msm_gpu *gpu)
 {
 	struct adreno_gpu *adreno_gpu = to_adreno_gpu(gpu);
-	u32 xin_halt_ctrl0_mask = 0xF;
+	u32 mask = 0xf;
 
 	/* A510 has 3 XIN ports in VBIF */
 	if (adreno_is_a510(adreno_gpu))
-		xin_halt_ctrl0_mask = 0x7;
+		mask = 0x7;
 
 	/* Clear the VBIF pipe before shutting down */
-	gpu_write(gpu, REG_A5XX_VBIF_XIN_HALT_CTRL0, xin_halt_ctrl0_mask);
+	gpu_write(gpu, REG_A5XX_VBIF_XIN_HALT_CTRL0, mask);
 	spin_until((gpu_read(gpu, REG_A5XX_VBIF_XIN_HALT_CTRL1) &
-				xin_halt_ctrl0_mask) == xin_halt_ctrl0_mask);
+				mask) == mask);
 
 	gpu_write(gpu, REG_A5XX_VBIF_XIN_HALT_CTRL0, 0);
 

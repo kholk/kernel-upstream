@@ -297,7 +297,7 @@ int a5xx_power_init(struct msm_gpu *gpu)
 	struct adreno_gpu *adreno_gpu = to_adreno_gpu(gpu);
 	int ret;
 
-	/* A505/A506/A510 (no ZAP) and A508/A509/A512 (w/ZAP) have no GPMU */
+	/* Not all A5xx chips have a GPMU */
 	if (adreno_is_a510(adreno_gpu))
 		return 0;
 
