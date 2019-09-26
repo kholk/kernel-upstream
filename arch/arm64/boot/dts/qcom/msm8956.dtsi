@@ -1002,7 +1002,7 @@
 			};
 		};
 
-#define USE_UPSTREAM_MMU 0
+#define USE_UPSTREAM_MMU 1
 #if USE_UPSTREAM_MMU
 		gpu_iommu: iommu@1f08000 {
 			#address-cells = <1>;
@@ -1018,26 +1018,27 @@
 			// gfx3d_user:
 			iommu-ctx@0 {
 				compatible = "qcom,msm-iommu-v1-ns";
-				reg = <0 0x1000>;
-				qcom,ctx-asid = <0>;
+				reg = <0x0 0x1000>;
+				qcom,ctx-num = <0>;
 				interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>;
 			};
 
 			// gfx3d_sec:
-			iommu-ctx@1000 {
-				compatible = "qcom,msm-iommu-v1-sec";
+			iommu-ctx@2000 {
+				compatible = "qcom,msm-iommu-v2-sec";
 				reg = <0x1000 0x1000>;
-				qcom,ctx-asid = <2>;
+				qcom,ctx-num = <2>;
 				interrupts = <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 			};
 
 			// gfx3d_priv:
-			iommu-ctx@2000 {
-				compatible = "qcom,msm-iommu-v1-sec";
+			iommu-ctx@3000 {
+				compatible = "qcom,msm-iommu-v2-sec";
 				reg = <0x2000 0x1000>;
-				qcom,ctx-asid = <1>;
+				qcom,ctx-num = <1>;
 				interrupts = <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>;
 			};
+
 		};
 #else
 		/*
@@ -1249,7 +1250,7 @@
 			clock-names = "iface", "bus";
 			qcom,iommu-secure-id = <17>;
 			status="ok";
-
+/*
 			// vfe:
 			iommu-ctx@1c000 {
 				compatible = "qcom,msm-iommu-v1-sec";
@@ -1265,12 +1266,12 @@
 				qcom,ctx-asid = <21>;
 				interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
 			};
-
+*/
 			// mdp_0:
 			iommu-ctx@1e000 {
 				compatible = "qcom,msm-iommu-v1-ns";
 				reg = <0x1e000 0x1000>;
-				qcom,ctx-asid = <22>;
+				qcom,ctx-num = <22>;
 				interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
 			};
 		};
