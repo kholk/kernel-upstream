@@ -1002,8 +1002,6 @@
 			};
 		};
 
-#define USE_UPSTREAM_MMU 1
-#if USE_UPSTREAM_MMU
 		gpu_iommu: iommu@1f08000 {
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -1040,78 +1038,6 @@
 			};
 
 		};
-#else
-		/*
-		 * kgsl_smmu range: 0x1f00000 - 0x1f10000
-		 *
-		 *  === context mapping ===
-		 * 0x1f00000 - 0x1f08000: General purpose KGSL range
-		 * 0x1f08000 - 0x1f09000: User (not secure) context
-		 * 0x1f09000 - 0x1f0a000: Secure KGSL context
-		 * 0x1f0a000 - 0x1f0b000: Private KGSL context (deprecated)
-		 * 0x1f0b000 - 0x1f10000: Unused range?
-		 *
-		 *  === config irqs ===
-		 * global_cfg_S_irq:  <0 42 0>
-		 * global_cfg_NS_irq: <0 43 0>
-		 *
-		 *  === other irqs ===
-		 * User context:    240
-		 * Secure context:  241
-		 * Private context: 242
-		 */
-
-		gpu_iommu: iommu@1f00000 {
-			compatible = "qcom,msm-smmu-v2", "qcom,msm-mmu-500";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			#iommu-cells = <1>;
-			//ranges = <0 0x1f00000 0x10000>;
-			//dma-ranges;
-			reg = <0x1f00000 0x10000>;
-			reg-names = "iommu_base";
-			interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "global_cfg_NS_irq", "global_cfg_S_irq";
-			label = "gfx_iommu";
-			qcom,qcom,use-aarch64-addressing;
-			qcom,iommu-secure-id = <18>;
-			clocks = <&gcc GCC_SMMU_CFG_CLK>,
-				 <&gcc GCC_GFX3D_TCU_CLK>;
-			clock-names = "iface_clk", "core_clk";
-			status = "ok";
-
-/* s6_level_ao, s2_level_ao ... wrong.....
-			power-domains = <&rpmpd MSM8956_VDDCX_VLVL>, <&rpmpd MSM8956_VDDMX_VLVL>;
-			power-domain-names = "cx", "mx";
-*/
-			iommu-ctx@1f08000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1f08000 0x1000>;
-				interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <0>;
-				label = "gfx3d_user";
-			};
-
-			iommu-ctx@1f09000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1f09000 0x1000>;
-				qcom,secure-context;
-				interrupts = <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <2>;
-				label = "gfx3d_secure";
-			};
-
-			iommu-ctx@1f0a000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1f0a000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <1>;
-				interrupts = <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>;
-				label = "gfx3d_priv";
-			};
-		};
-#endif
 
 /* @@@@@@@@@@@@@@@@@@@ HUGE UGLY HACK - START - @@@@@@@@@@@@@@@@@@@ */
 	mem_acc_gfx_vreg_corner: mem-acc-gfx-regulator {
@@ -1238,362 +1164,205 @@
 				};
 			};
 		};
-#if USE_UPSTREAM_MMU
-		apps_iommu: iommu@1ef0000 {
+
+		apps_iommu: iommu@1e1f000 {
 			#address-cells = <1>;
 			#size-cells = <1>;
 			#iommu-cells = <1>;
 			compatible = "qcom,msm8956-iommu", "qcom,msm-iommu-v1";
-			ranges = <0 0x1e19000 0x40000>;
+			/*ranges = <0 0x1e19000 0x40000>;*/
+			ranges = <0 0x1e1f000 0x21000>;
 			clocks = <&gcc GCC_SMMU_CFG_CLK>,
 				 <&gcc GCC_APSS_TCU_CLK>;
 			clock-names = "iface", "bus";
 			qcom,iommu-secure-id = <17>;
-			status="ok";
-/*
+			status = "ok";
+
+			// adsp_elf:
+			iommu-ctx@1000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x1000 0x1000>;
+				qcom,ctx-num = <1>;
+				interrupts = <GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// adsp_sec_pixel:
+			iommu-ctx@2000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x2000 0x1000>;
+				qcom,ctx-num = <2>;
+				interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// adsp_sec_bitstream:
+			iommu-ctx@3000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x3000 0x1000>;
+				qcom,ctx-num = <3>;
+				interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// venus_fw:
+			iommu-ctx@4000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x4000 0x1000>;
+				qcom,ctx-num = <4>;
+				interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// venus_sec_non_pixel:
+			iommu-ctx@5000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x5000 0x1000>;
+				qcom,ctx-num = <5>;
+				interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// venus_sec_bitstream:
+			iommu-ctx@6000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x6000 0x1000>;
+				qcom,ctx-num = <6>;
+				interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// venus_sec_pixel:
+			iommu-ctx@7000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x7000 0x1000>;
+				qcom,ctx-num = <7>;
+				interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// venus_enc:
+			iommu-ctx@8000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x8000 0x1000>;
+				qcom,ctx-num = <8>;
+				interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// mdp_1:
+			iommu-ctx@9000 {
+				compatible = "qcom,msm-iommu-v2-sec";
+				reg = <0x9000 0x1000>;
+				qcom,ctx-num = <9>;
+				interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			// adsp_io:
+			iommu-ctx@10000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x10000 0x1000>;
+				interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <14>;
+			};
+
+			// adsp_opendsp:
+			iommu-ctx@11000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x11000 0x1000>;
+				interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <15>;
+			};
+
+			// adsp_shared:
+			iommu-ctx@12000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x12000 0x1000>;
+				interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <16>;
+			};
+
+			// lpass_stream:
+			iommu-ctx@13000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x13000 0x1000>;
+				interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <17>;
+			};
+
+			// cpp:
+			iommu-ctx@14000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x14000 0x1000>;
+				interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <18>;
+			};
+
+			// jpeg_enc0:
+			iommu-ctx@15000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x15000 0x1000>;
+				interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <19>;
+			};
+
 			// vfe:
-			iommu-ctx@1c000 {
-				compatible = "qcom,msm-iommu-v1-sec";
-				reg = <0x1c000 0x1000>;
-				qcom,ctx-asid = <20>;
+			iommu-ctx@16000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x16000 0x1000>;
 				interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+				qcom,ctx-num = <20>;
 			};
 
 			// venus_ns:
-			iommu-ctx@1d000 {
-				compatible = "qcom,msm-iommu-v1-sec";
-				reg = <0x1d000 0x1000>;
-				qcom,ctx-asid = <21>;
-				interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
-			};
-*/
-			// mdp_0:
-			iommu-ctx@1e000 {
-				compatible = "qcom,msm-iommu-v1-ns";
-				reg = <0x1e000 0x1000>;
-				qcom,ctx-num = <22>;
-				interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
-			};
-		};
-#else
-
-		/*
-		 * apps_iommu range: 0x1e00000 - 0x1e40000
-		 *
-		 *  === context mapping ===
-		 * 0x1e00000 - 0x1e20000: General purpose APPS range
-		 * 0x1e20000 - 0x1e21000: ADSP ELF Secure context
-		 * 0x1e21000 - 0x1e22000: ADSP secure pixel context
-		 * 0x1e22000 - 0x1e23000: ADSP secure bit stream context
-		 * 0x1e23000 - 0x1e24000: Venus firmware secure context
-		 * 0x1e24000 - 0x1e25000: Venus non pixel secure context
-		 * 0x1e25000 - 0x1e26000: Venus secure bit stream context
-		 * 0x1e26000 - 0x1e27000: Venus secure pixel context
-		 * 0x1e27000 - 0x1e28000: Venus encoder secure context
-		 * 0x1e28000 - 0x1e29000: MDP 1 secure context
-		 *
-		 * 0x1e29000 - 0x1e2a000: RPM peripheral non-secure context
-		 * 0x1e2a000 - 0x1e2b000: LPASS non-secure context
-		 * 0x1e2b000 - 0x1e2c000: PRONTO PIL non-secure context
-		 * 0x1e2c000 - 0x1e2d000: Q6 non-secure context
-		 * 0x1e2d000 - 0x1e2e000: UNUSED / UNKNOWN non-secure? CONTEXT
-		 * 0x1e2e000 - 0x1e2f000: UNUSED / UNKNOWN non-secure? CONTEXT
-		 * 0x1e2f000 - 0x1e30000: ADSP I/O non-secure context
-		 * 0x1e30000 - 0x1e31000: ADSP OpenDSP non-secure context
-		 * 0x1e31000 - 0x1e32000: ADSP Shared non-secure context
-		 * 0x1e32000 - 0x1e33000: LPASS stream non-secure context
-		 * 0x1e33000 - 0x1e34000: CPP non-secure context
-		 * 0x1e34000 - 0x1e35000: JPEG Encoder 0 non-secure context
-		 * 0x1e35000 - 0x1e36000: VFE non-secure context
-		 * 0x1e36000 - 0x1e37000: Venus non-secure context
-		 * 0x1e37000 - 0x1e38000: MDP 0 non-secure context
-		 * 0x1e38000 - 0x1e39000: PRONTO buffer non-secure context
-		 * 0x1e39000 - 0x1e3a000: MSS NAV(?) non-secure context
-		 * 0x1e3a000 - 0x1e3b000: IPA shared non-secure context
-		 * 0x1e3b000 - 0x1e3c000: IPA WLAN non-secure context
-		 * 0x1e3c000 - 0x1e3d000: IPA uC non-secure context
-		 *
-		 *  === config irqs ===
-		 * global_cfg_S_irq:  <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>
-		 * global_cfg_NS_irq: <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>
-		 *
-		 *  === Secure contexts IRQs ===
-		 * ADSP ELF: 		254		ADSP sec pixel:		255
-		 * ADSP sec bitstream:	53
-		 *
-		 * Venus sec firmware:	54		Venus sec non-pixel:	58
-		 * Venus sec bitstream:	60		Venus sec pixel:	61
-		 * Venus encoder:	76
-		 *
-		 * MDP 1:		77
-		 *
-		 *  === Non-secure contexts IRQs ===
-		 * RPM Peripheral:	80		LPASS:			94
-		 * PRONTO PIL:		101		Q6:			102
-		 * ADSP I/O:		105		ADSP OpenDSP:		106
-		 * ADSP Shared:		109		LPASS Stream:		110
-		 * CPP:			111		JPEG Encoder 0:		112
-		 * VFE:			113		Venus non-secure:	114
-		 * MDP 0:		115		PRONTO Buffer:		116
-		 *
-		 * MSS NAV:		117
-		 *
-		 * IPA Shared:		118		IPA WLAN:		119
-		 * IPA uC:		120
-		 */
-
-		apps_iommu: qcom,iommu@1e00000 {
-			compatible = "qcom,msm-smmu-v2", "qcom,msm-mmu-500";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			//ranges;
-			reg = <0x1e00000 0x40000>;
-			reg-names = "iommu_base";
-			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "global_cfg_NS_irq", "global_cfg_S_irq";
-			label = "apps_iommu";
-			qcom,qcom,use-aarch64-addressing;
-			qcom,iommu-secure-id = <17>;
-			clocks = <&gcc GCC_SMMU_CFG_CLK>,
-				 <&gcc GCC_APSS_TCU_CLK>;
-			clock-names = "iface_clk", "core_clk";
-			qcom,cb-base-offset = <0x20000>;
-			#iommu-cells = <1>;
-			status = "ok";
-
-			adsp_elf: iommu-ctx@1e20000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e20000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <1>;
-				interrupts = <GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH>;
-				label = "adsp_elf";
-			};
-
-			adsp_sec_pixel: iommu-ctx@1e21000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e21000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <2>;
-				interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
-				label = "adsp_sec_pixel";
-			};
-
-			adsp_sec_bitstream: iommu-ctx@1e22000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e22000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <3>;
-				interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
-				label = "adsp_sec_bitstream";
-			};
-
-			venus_fw: iommu-ctx@1e23000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e23000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <4>;
-				interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
-				label = "venus_fw";
-				qcom,report-error-on-fault;
-			};
-
-			venus_sec_non_pixel: iommu-ctx@1e24000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e24000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <5>;
-				interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
-				label = "venus_sec_non_pixel";
-				qcom,report-error-on-fault;
-			};
-
-			venus_sec_bitstream: iommu-ctx@1e25000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e25000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <6>;
-				interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
-				label = "venus_sec_bitstream";
-				qcom,report-error-on-fault;
-			};
-
-			venus_sec_pixel: iommu-ctx@1e26000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e26000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <7>;
-				interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
-				label = "venus_sec_pixel";
-				qcom,report-error-on-fault;
-			};
-
-			venus_enc: iommu-ctx@1e27000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e27000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <8>;
-				interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>;
-				label = "venus_enc";
-				qcom,report-error-on-fault;
-			};
-
-			mdp_1: iommu-ctx@1e28000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e28000 0x1000>;
-				qcom,secure-context;
-				qcom,ctx-num = <9>;
-				interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>;
-				label = "mdp_1";
-			};
-
-			periph_rpm: iommu-ctx@1e29000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e29000 0x1000>;
-				interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <10>;
-				label = "periph_rpm";
-			};
-
-			lpass: iommu-ctx@1e2a000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e2a000 0x1000>;
-				interrupts = <GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <11>;
-				label = "lpass";
-			};
-
-			pronto_pil: iommu-ctx@1e2b000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e2b000 0x1000>;
-				interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <12>;
-				label = "pronto_pil";
-			};
-
-			q6: iommu-ctx@1e2c000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e2c000 0x1000>;
-				interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <13>;
-				label = "q6";
-			};
-
-			adsp_io: iommu-ctx@1e2f000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e2f000 0x1000>;
-				interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <14>;
-				label = "adsp_io";
-			};
-
-			adsp_opendsp: iommu-ctx@1e30000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e30000 0x1000>;
-				interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <15>;
-				label = "adsp_opendsp";
-			};
-
-			adsp_shared: iommu-ctx@1e31000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e31000 0x1000>;
-				interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <16>;
-				label = "adsp_shared";
-			};
-
-			lpass_stream: iommu-ctx@1e32000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e32000 0x1000>;
-				interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <17>;
-				label = "lpass_stream";
-			};
-
-			cpp: iommu-ctx@1e33000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e33000 0x1000>;
-				interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <18>;
-				label = "cpp";
-			};
-
-			jpeg_enc0: iommu-ctx@1e34000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e34000 0x1000>;
-				interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <19>;
-				label = "jpeg_enc0";
-			};
-
-			vfe: iommu-ctx@1e35000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e35000 0x1000>;
-				interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,ctx-num = <20>;
-				label = "vfe";
-			};
-
-			venus_ns: iommu-ctx@1e36000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e36000 0x1000>;
+			iommu-ctx@17000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x17000 0x1000>;
 				interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <21>;
-				label = "venus_ns";
-				qcom,report-error-on-fault;
 			};
 
-			mdp_0: iommu-ctx@1e37000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e37000 0x1000>;
+			// mdp_0:
+			iommu-ctx@18000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x18000 0x1000>;
 				interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <22>;
-				label = "mdp_0";
 			};
 
-			pronto_buf: iommu-ctx@1e38000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e38000 0x1000>;
+			// pronto_buf:
+			iommu-ctx@19000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x19000 0x1000>;
 				interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <23>;
-				label = "pronto_buf";
 			};
 
-			mss_nav: iommu-ctx@1e39000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e39000 0x1000>;
+			// mss_nav:
+			iommu-ctx@1a000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x1a000 0x1000>;
 				interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <24>;
-				label = "mss_nav";
 			};
 
-			ipa_shared: iommu-ctx@1e3a000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e3a000 0x1000>;
+			// ipa_shared:
+			iommu-ctx@1b000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x1b000 0x1000>;
 				interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <25>;
-				label = "ipa_shared";
 			};
 
-			ipa_wlan: iommu-ctx@1e3b000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e3b000 0x1000>;
+			// ipa_wlan:
+			iommu-ctx@1c000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x1c000 0x1000>;
 				interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <26>;
-				label = "ipa_wlan";
 			};
 
-			ipa_uc: iommu-ctx@1e3c000 {
-				compatible = "qcom,msm-smmu-v2-ctx";
-				reg = <0x1e3c000 0x1000>;
+			// ipa_uc:
+			iommu-ctx@1d000 {
+				compatible = "qcom,msm-iommu-v2-ns";
+				reg = <0x1d000 0x1000>;
 				interrupts = <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
 				qcom,ctx-num = <27>;
-				label = "ipa_uc";
 			};
 		};
-#endif
+
 		mdss: mdss@1a00000 {
 			compatible = "qcom,mdss";
 			reg = <0x1a00000 0x1000>,
