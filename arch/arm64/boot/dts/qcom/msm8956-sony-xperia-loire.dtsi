@@ -65,6 +65,14 @@
 		reset-gpios = <&pm8950_gpios 2 GPIO_ACTIVE_LOW>;
 	};
 
+	vibrator {
+		compatible = "gpio-vibrator";
+		enable-gpios = <&pmi8950_gpio 2 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&vibrator_ldo_en>;
+	};
+
 	firmware: firmware {
 		android {
 			compatible = "android,firmware";
@@ -597,6 +605,30 @@
 			output-low;
 			bias-disable;
 			power-source = <0>; /* VPH_PWR */
+		};
+	};
+};
+
+&pmi8950_gpio {
+	usb_switch_sel_gpio: usb_switch_sel {
+		usb_switch {
+			pins = "gpio1";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			qcom,drive-strength = <1>;
+			power-source = <0>;
+		};
+	};
+
+	vibrator_ldo_en: vib_ldo_en {
+		vibrator_ldo {
+			pins = "gpio2";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			qcom,drive-strength = <1>;
+			power-source = <0>;
 		};
 	};
 };
