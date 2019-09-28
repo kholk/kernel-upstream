@@ -3,11 +3,12 @@
  * Copyright (c) 2016-2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
  */
 
-#include <dt-bindings/interrupt-controller/irq.h>
 #include "msm8956.dtsi"
 #include "pmi8950.dtsi"
 #include "pm8950.dtsi"
 #include "pm8004.dtsi"
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	aliases {
@@ -30,6 +31,32 @@
 			ecc-size = <16>;
 			status = "ok";
 		};
+	};
+
+	panel_tvdd: tvdd-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "panel-tvdd";
+		gpio = <&msm_gpio 126 0>;
+		// This regulator is active-low.
+	};
+
+	bcm43455_pwr_vreg: wlan-regulator {
+		compatible = "regulator-fixed";
+
+		regulator-name = "wlan-vreg";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+
+		gpio = <&msm_gpio 48 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&wl_vreg_on_gpio>;
+	};
+
+	bcm43455_pwrseq: wlan-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&pm8950_gpios 2 GPIO_ACTIVE_LOW>;
 	};
 
 	firmware: firmware {
@@ -86,17 +113,49 @@
 
 /* eMMC */
 &sdhc_1 {
+	vmmc-supply = <&pm8950_l8>;
+	vqmmc-supply = <&pm8950_l5>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdc1_clk_on &sdc1_cmd_on &sdc1_data_on>;
+
 	status = "ok";
 };
 
 /* MicroSD card slot */
 &sdhc_2 {
+	vmmc-supply = <&pm8950_l11>;
+	vqmmc-supply = <&pm8950_l12>;
+	cd-gpios = <&msm_gpio 100 0>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdc2_clk_on &sdc2_cmd_on &sdc2_data_on &tray_det_n_gpio>;
+
 	status = "ok";
 };
 
 /* SDIO (internal) to BCM WiFi */
 &sdhc_3 {
 	status = "ok";
+	no-sd;
+	no-mmc;
+
+	bus-width = <4>;
+	max-frequency = <100000000>;
+	keep-power-in-suspend;
+
+	non-removable;
+	wakeup-source;
+	vmmc-supply = <&bcm43455_pwr_vreg>;
+	mmc-pwrseq = <&bcm43455_pwrseq>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdc3_clk_on &sdc3_cmd_on &sdc3_dat_on &wlan_sleep_pin
+		     &wl_host_wake_n_gpio>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	brcmf: brcmf@1 {
 		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
@@ -175,6 +234,32 @@
 		};
 	};
 
+	wl_host_wake_n_gpio: wl_host_wake_n_gpio {
+		mux {
+			pins = "gpio45";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio45";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	wl_vreg_on_gpio: wl_vreg_on_gpio {
+		mux {
+			pins = "gpio48";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio48";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
 	tp_reset_n_gpio: tp_reset_n_gpio {
 		mux {
 			pins = "gpio64";
@@ -198,35 +283,26 @@
 			input-enable;
 		};
 	};
+
+	tray_det_n_gpio: tray_det_n_gpio {
+		mux {
+			pins = "gpio100";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio100";
+			drive-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
 };
 
-/* HACK!!!!!! */
-&gfx_vreg_corner {
-	vdd-gfx-supply = <&pm8004_s5>;
-
-	regulator-always-on;
-	regulator-boot-on;
-	regulator-min-microvolt = <5>;
-
-	power-domains = <&rpmpd MSM8956_VDDCX_AO>, <&rpmpd MSM8956_VDDCX_AO>;
-	power-domain-names = "mx", "cx";
-	qcom,mx-corner-map = <RPM_SMD_LEVEL_SVS>,
-				 <RPM_SMD_LEVEL_SVS>,
-				 <RPM_SMD_LEVEL_SVS>,
-				 <RPM_SMD_LEVEL_SVS>,
-				 <RPM_SMD_LEVEL_SVS_PLUS>,
-				 <RPM_SMD_LEVEL_NOM>,
-				 <RPM_SMD_LEVEL_NOM_PLUS>,
-				 <RPM_SMD_LEVEL_TURBO>,
-				 <RPM_SMD_LEVEL_TURBO>;
-};
-
-&mem_acc_gfx_vreg_corner {
-	regulator-always-on;
-};
-
-&adreno_gpu {
-	vdd-supply = <&gfx_vreg_corner>;
+&sdc3_clk_on {
+	config {
+		drive-strength = <10>;
+	};
 };
 
 &venus {
@@ -247,19 +323,19 @@
 
 	/* Cluster 1 supply */
 	pm8004_s2: s2 {
-		/* hack this on until the CPU driver is in */
+		/* Set APC1 AON at boot until a proper solution lands */
 		regulator-always-on;
 		regulator-boot-on;
 		regulator-name = "vdd_apc1";
-		/* regulator-min-microvolt = <500000>; */ // Original
+		/* regulator-min-microvolt = <500000>; */ // TODO: Put me back!
 		/* Set .95V to prevent unstabilities during early dev */
 		regulator-min-microvolt = <950000>;
 		regulator-max-microvolt = <1165000>;
 	};
 
 	pm8004_s5: s5 {
-		/* hack this on until the gpu driver is ready for it */
-		regulator-always-on;
+		/* Put GFX VDD up at boot until a proper solution lands */
+		regulator-boot-on;
 
 		regulator-name = "vdd_gfx";
 		regulator-min-microvolt = <950000>;
@@ -268,16 +344,20 @@
 	};
 };
 
+&adreno_gpu {
+	vdd-supply = <&pm8004_s5>;
+};
+
 &pm8950_spmi_regulators {
 	vdd_s5-supply = <&vph_pwr>;
 
 	/* Cluster 0 supply */
 	pm8950_spmi_s5: s5 {
-		/* hack this on until the CPU driver is in */
+		/* Set APC0 AON at boot until a proper solution lands */
 		regulator-always-on;
 		regulator-boot-on;
 		regulator-name = "vdd_apc0";
-		/* regulator-min-microvolt = <790000>; */
+		/* regulator-min-microvolt = <790000>; */ // TODO: Put me back!
 		/* Set .95V to prevent unstabilities during early dev */
 		regulator-min-microvolt = <950000>;
 		regulator-max-microvolt = <1165000>;
@@ -347,6 +427,9 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		qcom,init-voltage = <1800000>;
+
+		regulator-system-load = <300000>;
+		regulator-allow-set-load;
 		status = "okay";
 	};
 
@@ -368,6 +451,9 @@
 		regulator-min-microvolt = <2900000>;
 		regulator-max-microvolt = <2900000>;
 		qcom,init-voltage = <2900000>;
+
+		regulator-system-load = <550000>;
+		regulator-allow-set-load;
 		status = "okay";
 	};
 
@@ -389,6 +475,9 @@
 		regulator-min-microvolt = <2950000>;
 		regulator-max-microvolt = <2950000>;
 		qcom,init-voltage = <2950000>;
+
+		regulator-system-load = <550000>;
+		regulator-allow-set-load;
 		status = "okay";
 	};
 
@@ -396,6 +485,9 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <2950000>;
 		qcom,init-voltage = <1800000>;
+
+		regulator-system-load = <22000>;
+		regulator-allow-set-load;
 		status = "okay";
 	};
 
@@ -457,7 +549,7 @@
 };
 
 &pm8950_gpios {
-	pm8950_gpio_1: cdc_pm_mclk {
+	cdc_pm_mclk_pin: cdc_pm_mclk {
 		cdc_pm {
 			pins = "gpio1";
 			function = "func1"; /* SF1 */
@@ -468,7 +560,19 @@
 		};
 	};
 
-	pm8950_gpio_7: wcd_eldo_en {
+	wlan_sleep_pin: wl_sleep_clk {
+		wl_sleep {
+			pins = "gpio2";
+			function = "func1"; /* SF1 SLEEP_CLK2 */
+			output-high;
+			bias-disable;
+			drive-push-pull;
+			qcom,drive-strength = <1>;
+			power-source = <0>; /* VPH_PWR */
+		};
+	};
+
+	wcd_eldo_pin: wcd_eldo_en {
 		wcd_eldo {
 			pins = "gpio7";
 			function = "gpio";
