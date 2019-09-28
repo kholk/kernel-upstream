@@ -54,7 +54,7 @@
 		compatible = "jdi,syn-incell-h455tax01";
 		reg = <0>;
 		status = "okay";
-		disp-te-gpio = <&msm_gpio 24 0>;
+		disp-te-gpio = <&msm_gpio 24 1>;
 
 		vddio-supply = <&pm8950_l6>; /* 1.8V */
 		avdd-supply = <&pm8950_l23>; /* 1.2V */
