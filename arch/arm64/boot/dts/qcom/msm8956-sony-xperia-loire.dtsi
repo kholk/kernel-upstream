@@ -33,11 +33,17 @@
 		};
 	};
 
-	panel_tvdd: tvdd-regulator {
+	tp_vddio_vreg: tp-vddio-regulator {
 		compatible = "regulator-fixed";
-		regulator-name = "panel-tvdd";
-		gpio = <&msm_gpio 126 0>;
-		// This regulator is active-low.
+
+		regulator-name = "tp-vddio";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+
+		gpio = <&msm_gpio 126 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&tp_vddio_en_gpio>;
 	};
 
 	bcm43455_pwr_vreg: wlan-regulator {
@@ -178,7 +184,7 @@
 		/* TODO: Should we move them?
 		 * vdd-supply, vio-supply are supported in this driver.
 		 */
-		vdd-supply = <&panel_tvdd>;
+		vdd-supply = <&tp_vddio_vreg>;
 
 		syna,reset-delay-ms = <220>;
 		syna,startup-delay-ms = <220>;
@@ -297,6 +303,18 @@
 		};
 	};
 
+	tp_vddio_en_gpio: tp_vddio_en_gpio {
+		mux {
+			pins = "gpio126";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio126";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
 };
 
 &sdc3_clk_on {

@@ -59,7 +59,7 @@
 		vddio-supply = <&pm8950_l6>; /* 1.8V */
 		avdd-supply = <&pm8950_l23>; /* 1.2V */
 		tvdd-supply = <&pm8950_l22>; /* 3.0V */
-		tvddio-supply = <&panel_tvdd>;
+		tvddio-supply = <&tp_vddio_vreg>;
 
 		preset-gpio = <&msm_gpio 25 0>;
 		treset-gpio = <&msm_gpio 64 0>;

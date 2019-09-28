@@ -33,7 +33,7 @@
 		avdd-supply = <&pm8950_l23>; /* 1.2V */
 		// No tvdd for full in-cell.
 		// tvdd-supply = <&pm8950_l22>; /* 3.0V */
-		tvddio-supply = <&panel_tvdd>;
+		tvddio-supply = <&tp_vddio_vreg>;
 		// No pvddio-supply for the Suzu panel (Dora has it though).
 
 		preset-gpio = <&msm_gpio 25 0>;
