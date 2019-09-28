@@ -78,12 +78,12 @@
 			reg = <0x0 0x8DA00000 0x0 0x2600000>;
 			no-map;
 		};
-/*
+
 		tz_apps: tz_apps@8dd00000 {
 			reg = <0x0 0x8dd00000 0x0 0x1400000>;
 			no-map;
 		};
-*/
+
 		rmtfs@dc400000 {
 			compatible = "qcom,rmtfs-mem";
 
@@ -1012,6 +1012,7 @@
 				 <&gcc GCC_GFX3D_TCU_CLK>;
 			clock-names = "iface", "bus";
 			qcom,iommu-secure-id = <18>;
+			power-domains = <&gcc OXILI_GX_GDSC>;
 
 			// gfx3d_user:
 			iommu-ctx@0 {
@@ -1126,8 +1127,11 @@
 
 		adreno_gpu: gpu@1c00000 {
 			compatible = "qcom,adreno-510.0", "qcom,adreno";
+			#stream-id-cells = <16>;
+
 			reg = <0x01c00000 0x40000>;
 			reg-names = "kgsl_3d0_reg_memory";
+
 			interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "kgsl_3d0_irq";
 
@@ -1151,14 +1155,15 @@
 
 			power-domains = <&gcc OXILI_CX_GDSC>;
 			operating-points-v2 = <&gpu_opp_table>;
-			iommus = <&gpu_iommu 0>;
+			iommus = <&gpu_iommu 0>; //, <&gpu_iommu 1>;
 
 			gpu_opp_table: opp_table {
 				compatible = "operating-points-v2";
-
+/*
 				opp-200000000 {
 					opp-hz = /bits/ 64 <200000000>;
 				};
+*/
 				opp-160000000 {
 					opp-hz = /bits/ 64 <160000000>;
 				};

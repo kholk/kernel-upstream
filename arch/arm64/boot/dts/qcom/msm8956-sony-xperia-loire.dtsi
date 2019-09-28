@@ -259,7 +259,7 @@
 
 	pm8004_s5: s5 {
 		/* hack this on until the gpu driver is ready for it */
-		//regulator-always-on;
+		regulator-always-on;
 
 		regulator-name = "vdd_gfx";
 		regulator-min-microvolt = <950000>;
