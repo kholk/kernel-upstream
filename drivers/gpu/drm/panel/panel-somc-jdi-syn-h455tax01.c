@@ -308,16 +308,25 @@ static int h455tax01_panel_prepare(struct drm_panel *panel)
 	usleep_range(1000, 1100);
 
 	if (h455tax01_panel->ts_reset_gpio)
-		gpiod_set_value(h455tax01_panel->ts_reset_gpio, 1);
+		gpiod_set_value(h455tax01_panel->ts_reset_gpio, 0);
 
 #ifdef MDSS_BUG_SOLVED
 	if (h455tax01_panel->pan_reset_gpio) {
 		gpiod_set_value(h455tax01_panel->pan_reset_gpio, 0);
-		usleep_range(10000, 10000);
-		gpiod_set_value(h455tax01_panel->pan_reset_gpio, 1);
 		usleep_range(10000, 11000);
+		gpiod_set_value(h455tax01_panel->pan_reset_gpio, 1);
+		usleep_range(16000, 17000);
+		gpiod_set_value(h455tax01_panel->pan_reset_gpio, 0);
+		usleep_range(7000, 7500);
+		gpiod_set_value(h455tax01_panel->pan_reset_gpio, 1);
+		usleep_range(16000, 17000);
 	};
 #endif
+
+	if (h455tax01_panel->ts_reset_gpio)
+		gpiod_set_value(h455tax01_panel->ts_reset_gpio, 1);
+	msleep(40);
+
 
 	rc = h455tax01_panel_init(h455tax01_panel);
 	if (rc < 0) {
@@ -375,10 +384,11 @@ static int h455tax01_panel_get_modes(struct drm_panel *panel)
 
 	drm_mode_set_name(mode);
 
-	drm_mode_probed_add(panel->connector, mode);
+	panel->connector->display_info.width_mm = mode->width_mm = 56;
+	panel->connector->display_info.height_mm = mode->height_mm = 100;
 
-	panel->connector->display_info.width_mm = 56;
-	panel->connector->display_info.height_mm = 100;
+	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
+	drm_mode_probed_add(panel->connector, mode);
 
 	return 1;
 }

@@ -6,10 +6,11 @@
 /dts-v1/;
 
 #include "msm8956-sony-xperia-loire.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
-	model = "SoMC Loire Kugo-ROW";
-	compatible = "somc,kugo-row", "qcom,msm8956";
+	model = "Sony Xperia X Compact (Codename Kugo)";
+	compatible = "sony,xperia-kugo", "qcom,msm8956";
 
 	qcom,board-id = <8 0>;
 };
@@ -61,8 +62,8 @@
 		tvdd-supply = <&pm8950_l22>; /* 3.0V */
 		tvddio-supply = <&tp_vddio_vreg>;
 
-		preset-gpio = <&msm_gpio 25 0>;
-		treset-gpio = <&msm_gpio 64 0>;
+		preset-gpio = <&msm_gpio 25 GPIO_ACTIVE_HIGH>;
+		treset-gpio = <&msm_gpio 64 GPIO_ACTIVE_HIGH>;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&mdss_te_active &disp_reset_n_gpio

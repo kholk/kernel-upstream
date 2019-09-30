@@ -8,8 +8,8 @@
 #include "msm8956-sony-xperia-loire.dtsi"
 
 / {
-	model = "SoMC Loire Suzu-ROW";
-	compatible = "somc,suzu-row", "qcom,msm8956";
+	model = "Sony Xperia X (Codename Suzu)";
+	compatible = "sony,xperia-suzu", "qcom,msm8956";
 
 	qcom,board-id = <8 0>;
 };
