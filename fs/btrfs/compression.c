@@ -311,7 +311,8 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 				 unsigned long compressed_len,
 				 struct page **compressed_pages,
 				 unsigned long nr_pages,
-				 unsigned int write_flags)
+				 unsigned int write_flags,
+				 struct cgroup_subsys_state *blkcg_css)
 {
 	struct btrfs_fs_info *fs_info = btrfs_sb(inode->i_sb);
 	struct bio *bio = NULL;
@@ -346,6 +347,11 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 	bio->bi_opf = REQ_OP_WRITE | write_flags;
 	bio->bi_private = cb;
 	bio->bi_end_io = end_compressed_bio_write;
+
+	if (blkcg_css) {
+		bio->bi_opf |= REQ_CGROUP_PUNT;
+		bio_associate_blkg_from_css(bio, blkcg_css);
+	}
 	refcount_set(&cb->pending_bios, 1);
 
 	/* create and submit bios for the compressed pages */
@@ -378,7 +384,7 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 				BUG_ON(ret); /* -ENOMEM */
 			}
 
-			ret = btrfs_map_bio(fs_info, bio, 0, 1);
+			ret = btrfs_map_bio(fs_info, bio, 0);
 			if (ret) {
 				bio->bi_status = ret;
 				bio_endio(bio);
@@ -409,7 +415,7 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 		BUG_ON(ret); /* -ENOMEM */
 	}
 
-	ret = btrfs_map_bio(fs_info, bio, 0, 1);
+	ret = btrfs_map_bio(fs_info, bio, 0);
 	if (ret) {
 		bio->bi_status = ret;
 		bio_endio(bio);
@@ -668,7 +674,7 @@ blk_status_t btrfs_submit_compressed_read(struct inode *inode, struct bio *bio,
 						  fs_info->sectorsize);
 			sums += csum_size * nr_sectors;
 
-			ret = btrfs_map_bio(fs_info, comp_bio, mirror_num, 0);
+			ret = btrfs_map_bio(fs_info, comp_bio, mirror_num);
 			if (ret) {
 				comp_bio->bi_status = ret;
 				bio_endio(comp_bio);
@@ -693,7 +699,7 @@ blk_status_t btrfs_submit_compressed_read(struct inode *inode, struct bio *bio,
 		BUG_ON(ret); /* -ENOMEM */
 	}
 
-	ret = btrfs_map_bio(fs_info, comp_bio, mirror_num, 0);
+	ret = btrfs_map_bio(fs_info, comp_bio, mirror_num);
 	if (ret) {
 		comp_bio->bi_status = ret;
 		bio_endio(comp_bio);
