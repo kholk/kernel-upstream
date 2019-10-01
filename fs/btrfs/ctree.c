@@ -56,31 +56,6 @@ struct btrfs_path *btrfs_alloc_path(void)
 	return kmem_cache_zalloc(btrfs_path_cachep, GFP_NOFS);
 }
 
-/*
- * set all locked nodes in the path to blocking locks.  This should
- * be done before scheduling
- */
-noinline void btrfs_set_path_blocking(struct btrfs_path *p)
-{
-	int i;
-	for (i = 0; i < BTRFS_MAX_LEVEL; i++) {
-		if (!p->nodes[i] || !p->locks[i])
-			continue;
-		/*
-		 * If we currently have a spinning reader or writer lock this
-		 * will bump the count of blocking holders and drop the
-		 * spinlock.
-		 */
-		if (p->locks[i] == BTRFS_READ_LOCK) {
-			btrfs_set_lock_blocking_read(p->nodes[i]);
-			p->locks[i] = BTRFS_READ_LOCK_BLOCKING;
-		} else if (p->locks[i] == BTRFS_WRITE_LOCK) {
-			btrfs_set_lock_blocking_write(p->nodes[i]);
-			p->locks[i] = BTRFS_WRITE_LOCK_BLOCKING;
-		}
-	}
-}
-
 /* this also releases the path */
 void btrfs_free_path(struct btrfs_path *p)
 {
@@ -2379,32 +2354,6 @@ static noinline void unlock_up(struct btrfs_path *path, int level,
 }
 
 /*
- * This releases any locks held in the path starting at level and
- * going all the way up to the root.
- *
- * btrfs_search_slot will keep the lock held on higher nodes in a few
- * corner cases, such as COW of the block at slot zero in the node.  This
- * ignores those rules, and it should only be called when there are no
- * more updates to be done higher up in the tree.
- */
-noinline void btrfs_unlock_up_safe(struct btrfs_path *path, int level)
-{
-	int i;
-
-	if (path->keep_locks)
-		return;
-
-	for (i = level; i < BTRFS_MAX_LEVEL; i++) {
-		if (!path->nodes[i])
-			continue;
-		if (!path->locks[i])
-			continue;
-		btrfs_tree_unlock_rw(path->nodes[i], path->locks[i]);
-		path->locks[i] = 0;
-	}
-}
-
-/*
  * helper function for btrfs_search_slot.  The goal is to find a block
  * in cache without setting the path to blocking.  If we find the block
  * we return zero and the path is unchanged.
@@ -2785,12 +2734,10 @@ again:
 	}
 
 	while (b) {
+		int dec = 0;
+
 		level = btrfs_header_level(b);
 
-		/*
-		 * setup the path here so we can release it under lock
-		 * contention with the cow code
-		 */
 		if (cow) {
 			bool last_level = (level == (BTRFS_MAX_LEVEL - 1));
 
@@ -2861,73 +2808,7 @@ cow_done:
 		if (ret < 0)
 			goto done;
 
-		if (level != 0) {
-			int dec = 0;
-			if (ret && slot > 0) {
-				dec = 1;
-				slot -= 1;
-			}
-			p->slots[level] = slot;
-			err = setup_nodes_for_search(trans, root, p, b, level,
-					     ins_len, &write_lock_level);
-			if (err == -EAGAIN)
-				goto again;
-			if (err) {
-				ret = err;
-				goto done;
-			}
-			b = p->nodes[level];
-			slot = p->slots[level];
-
-			/*
-			 * slot 0 is special, if we change the key
-			 * we have to update the parent pointer
-			 * which means we must have a write lock
-			 * on the parent
-			 */
-			if (slot == 0 && ins_len &&
-			    write_lock_level < level + 1) {
-				write_lock_level = level + 1;
-				btrfs_release_path(p);
-				goto again;
-			}
-
-			unlock_up(p, level, lowest_unlock,
-				  min_write_lock_level, &write_lock_level);
-
-			if (level == lowest_level) {
-				if (dec)
-					p->slots[level]++;
-				goto done;
-			}
-
-			err = read_block_for_search(root, p, &b, level,
-						    slot, key);
-			if (err == -EAGAIN)
-				goto again;
-			if (err) {
-				ret = err;
-				goto done;
-			}
-
-			if (!p->skip_locking) {
-				level = btrfs_header_level(b);
-				if (level <= write_lock_level) {
-					if (!btrfs_try_tree_write_lock(b)) {
-						btrfs_set_path_blocking(p);
-						btrfs_tree_lock(b);
-					}
-					p->locks[level] = BTRFS_WRITE_LOCK;
-				} else {
-					if (!btrfs_tree_read_lock_atomic(b)) {
-						btrfs_set_path_blocking(p);
-						btrfs_tree_read_lock(b);
-					}
-					p->locks[level] = BTRFS_READ_LOCK;
-				}
-				p->nodes[level] = b;
-			}
-		} else {
+		if (level == 0) {
 			p->slots[level] = slot;
 			if (ins_len > 0 &&
 			    btrfs_leaf_free_space(b) < ins_len) {
@@ -2951,6 +2832,67 @@ cow_done:
 				unlock_up(p, level, lowest_unlock,
 					  min_write_lock_level, NULL);
 			goto done;
+		}
+		if (ret && slot > 0) {
+			dec = 1;
+			slot--;
+		}
+		p->slots[level] = slot;
+		err = setup_nodes_for_search(trans, root, p, b, level, ins_len,
+					     &write_lock_level);
+		if (err == -EAGAIN)
+			goto again;
+		if (err) {
+			ret = err;
+			goto done;
+		}
+		b = p->nodes[level];
+		slot = p->slots[level];
+
+		/*
+		 * Slot 0 is special, if we change the key we have to update
+		 * the parent pointer which means we must have a write lock on
+		 * the parent
+		 */
+		if (slot == 0 && ins_len && write_lock_level < level + 1) {
+			write_lock_level = level + 1;
+			btrfs_release_path(p);
+			goto again;
+		}
+
+		unlock_up(p, level, lowest_unlock, min_write_lock_level,
+			  &write_lock_level);
+
+		if (level == lowest_level) {
+			if (dec)
+				p->slots[level]++;
+			goto done;
+		}
+
+		err = read_block_for_search(root, p, &b, level, slot, key);
+		if (err == -EAGAIN)
+			goto again;
+		if (err) {
+			ret = err;
+			goto done;
+		}
+
+		if (!p->skip_locking) {
+			level = btrfs_header_level(b);
+			if (level <= write_lock_level) {
+				if (!btrfs_try_tree_write_lock(b)) {
+					btrfs_set_path_blocking(p);
+					btrfs_tree_lock(b);
+				}
+				p->locks[level] = BTRFS_WRITE_LOCK;
+			} else {
+				if (!btrfs_tree_read_lock_atomic(b)) {
+					btrfs_set_path_blocking(p);
+					btrfs_tree_read_lock(b);
+				}
+				p->locks[level] = BTRFS_READ_LOCK;
+			}
+			p->nodes[level] = b;
 		}
 	}
 	ret = 1;
@@ -3008,6 +2950,8 @@ again:
 	p->locks[level] = BTRFS_READ_LOCK;
 
 	while (b) {
+		int dec = 0;
+
 		level = btrfs_header_level(b);
 		p->nodes[level] = b;
 
@@ -3028,47 +2972,45 @@ again:
 		if (ret < 0)
 			goto done;
 
-		if (level != 0) {
-			int dec = 0;
-			if (ret && slot > 0) {
-				dec = 1;
-				slot -= 1;
-			}
-			p->slots[level] = slot;
-			unlock_up(p, level, lowest_unlock, 0, NULL);
-
-			if (level == lowest_level) {
-				if (dec)
-					p->slots[level]++;
-				goto done;
-			}
-
-			err = read_block_for_search(root, p, &b, level,
-						    slot, key);
-			if (err == -EAGAIN)
-				goto again;
-			if (err) {
-				ret = err;
-				goto done;
-			}
-
-			level = btrfs_header_level(b);
-			if (!btrfs_tree_read_lock_atomic(b)) {
-				btrfs_set_path_blocking(p);
-				btrfs_tree_read_lock(b);
-			}
-			b = tree_mod_log_rewind(fs_info, p, b, time_seq);
-			if (!b) {
-				ret = -ENOMEM;
-				goto done;
-			}
-			p->locks[level] = BTRFS_READ_LOCK;
-			p->nodes[level] = b;
-		} else {
+		if (level == 0) {
 			p->slots[level] = slot;
 			unlock_up(p, level, lowest_unlock, 0, NULL);
 			goto done;
 		}
+
+		if (ret && slot > 0) {
+			dec = 1;
+			slot--;
+		}
+		p->slots[level] = slot;
+		unlock_up(p, level, lowest_unlock, 0, NULL);
+
+		if (level == lowest_level) {
+			if (dec)
+				p->slots[level]++;
+			goto done;
+		}
+
+		err = read_block_for_search(root, p, &b, level, slot, key);
+		if (err == -EAGAIN)
+			goto again;
+		if (err) {
+			ret = err;
+			goto done;
+		}
+
+		level = btrfs_header_level(b);
+		if (!btrfs_tree_read_lock_atomic(b)) {
+			btrfs_set_path_blocking(p);
+			btrfs_tree_read_lock(b);
+		}
+		b = tree_mod_log_rewind(fs_info, p, b, time_seq);
+		if (!b) {
+			ret = -ENOMEM;
+			goto done;
+		}
+		p->locks[level] = BTRFS_READ_LOCK;
+		p->nodes[level] = b;
 	}
 	ret = 1;
 done:
