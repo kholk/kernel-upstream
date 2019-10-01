@@ -10,6 +10,7 @@
 #include <linux/pagemap.h>
 #include <linux/blkdev.h>
 #include <linux/uuid.h>
+#include "misc.h"
 #include "ctree.h"
 #include "disk-io.h"
 #include "transaction.h"
@@ -19,6 +20,7 @@
 #include "volumes.h"
 #include "dev-replace.h"
 #include "qgroup.h"
+#include "block-group.h"
 
 #define BTRFS_ROOT_TRANS_TAG 0
 
@@ -484,7 +486,7 @@ start_transaction(struct btrfs_root *root, unsigned int num_items,
 		 * worth of delayed refs updates in this trans handle, and
 		 * refill that amount for whatever is missing in the reserve.
 		 */
-		num_bytes = btrfs_calc_trans_metadata_size(fs_info, num_items);
+		num_bytes = btrfs_calc_insert_metadata_size(fs_info, num_items);
 		if (delayed_refs_rsv->full == 0) {
 			delayed_refs_bytes = num_bytes;
 			num_bytes <<= 1;
@@ -635,7 +637,7 @@ struct btrfs_trans_handle *btrfs_start_transaction_fallback_global_rsv(
 	if (IS_ERR(trans))
 		return trans;
 
-	num_bytes = btrfs_calc_trans_metadata_size(fs_info, num_items);
+	num_bytes = btrfs_calc_insert_metadata_size(fs_info, num_items);
 	ret = btrfs_cond_migrate_bytes(fs_info, &fs_info->trans_block_rsv,
 				       num_bytes, min_factor);
 	if (ret) {
@@ -988,7 +990,7 @@ static int __btrfs_wait_marked_extents(struct btrfs_fs_info *fs_info,
 	return werr;
 }
 
-int btrfs_wait_extents(struct btrfs_fs_info *fs_info,
+static int btrfs_wait_extents(struct btrfs_fs_info *fs_info,
 		       struct extent_io_tree *dirty_pages)
 {
 	bool errors = false;
@@ -1946,6 +1948,8 @@ int btrfs_commit_transaction(struct btrfs_trans_handle *trans)
 	struct btrfs_transaction *cur_trans = trans->transaction;
 	struct btrfs_transaction *prev_trans = NULL;
 	int ret;
+
+	ASSERT(refcount_read(&trans->use_count) == 1);
 
 	/* Stop the commit early if ->aborted is set */
 	if (unlikely(READ_ONCE(cur_trans->aborted))) {

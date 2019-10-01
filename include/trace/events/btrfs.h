@@ -1088,6 +1088,7 @@ TRACE_EVENT(btrfs_trigger_flush,
 		{ FLUSH_DELAYED_REFS,		"FLUSH_ELAYED_REFS"},		\
 		{ ALLOC_CHUNK,			"ALLOC_CHUNK"},			\
 		{ ALLOC_CHUNK_FORCE,		"ALLOC_CHUNK_FORCE"},		\
+		{ RUN_DELAYED_IPUTS,		"RUN_DELAYED_IPUTS"},		\
 		{ COMMIT_TRANS,			"COMMIT_TRANS"})
 
 TRACE_EVENT(btrfs_flush_space,
@@ -1388,9 +1389,9 @@ DECLARE_EVENT_CLASS(btrfs__work,
 );
 
 /*
- * For situiations when the work is freed, we pass fs_info and a tag that that
- * matches address of the work structure so it can be paired with the
- * scheduling event.
+ * For situations when the work is freed, we pass fs_info and a tag that matches
+ * the address of the work structure so it can be paired with the scheduling
+ * event. DO NOT add anything here that dereferences wtag.
  */
 DECLARE_EVENT_CLASS(btrfs__work__done,
 
@@ -2086,8 +2087,6 @@ DEFINE_BTRFS_LOCK_EVENT(btrfs_tree_read_unlock);
 DEFINE_BTRFS_LOCK_EVENT(btrfs_tree_read_unlock_blocking);
 DEFINE_BTRFS_LOCK_EVENT(btrfs_set_lock_blocking_read);
 DEFINE_BTRFS_LOCK_EVENT(btrfs_set_lock_blocking_write);
-DEFINE_BTRFS_LOCK_EVENT(btrfs_clear_lock_blocking_read);
-DEFINE_BTRFS_LOCK_EVENT(btrfs_clear_lock_blocking_write);
 DEFINE_BTRFS_LOCK_EVENT(btrfs_try_tree_read_lock);
 DEFINE_BTRFS_LOCK_EVENT(btrfs_try_tree_write_lock);
 DEFINE_BTRFS_LOCK_EVENT(btrfs_tree_read_lock_atomic);
