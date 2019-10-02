@@ -831,3 +831,7 @@
 &ibt {
 	status = "okay";
 };
+
+&vuart1 {
+	status = "okay";
+};
