@@ -827,3 +827,7 @@
 &i2c13 {
 	status = "okay";
 };
+
+&ibt {
+	status = "okay";
+};
