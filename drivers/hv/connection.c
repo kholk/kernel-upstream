@@ -361,6 +361,7 @@ void vmbus_on_event(unsigned long data)
 
 	trace_vmbus_on_event(channel);
 
+	hv_debug_delay_test(channel, INTERRUPT_DELAY);
 	do {
 		void (*callback_fn)(void *);
 
