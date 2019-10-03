@@ -67,8 +67,12 @@ __modpost:
 
 else
 
+MODPOST += $(subst -i,-n,$(filter -i,$(MAKEFLAGS))) -s -T -
+
+ifeq ($(KBUILD_EXTMOD),)
+MODPOST += $(wildcard vmlinux)
+else
 # When building external modules load the Kbuild file to retrieve EXTRA_SYMBOLS info
-ifneq ($(KBUILD_EXTMOD),)
 
 # set src + obj - they may be used when building the .mod.c file
 obj := $(KBUILD_EXTMOD)
@@ -78,8 +82,6 @@ src := $(obj)
 include $(if $(wildcard $(KBUILD_EXTMOD)/Kbuild), \
              $(KBUILD_EXTMOD)/Kbuild, $(KBUILD_EXTMOD)/Makefile)
 endif
-
-MODPOST += $(subst -i,-n,$(filter -i,$(MAKEFLAGS))) -s -T - $(wildcard vmlinux)
 
 # find all modules listed in modules.order
 modules := $(sort $(shell cat $(MODORDER)))
