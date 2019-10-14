@@ -169,7 +169,13 @@ cifs_read_super(struct super_block *sb)
 	else
 		sb->s_maxbytes = MAX_NON_LFS;
 
-	/* Some very old servers like DOS and OS/2 used 2 second granularity */
+	/*
+	 * Some very old servers like DOS and OS/2 used 2 second granularity
+	 * (while all current servers use 100ns granularity - see MS-DTYP)
+	 * but 1 second is the maximum allowed granularity for the VFS
+	 * so for old servers set time granularity to 1 second while for
+	 * everything else (current servers) set it to 100ns.
+	 */
 	if ((tcon->ses->server->vals->protocol_id == SMB10_PROT_ID) &&
 	    ((tcon->ses->capabilities &
 	      tcon->ses->server->vals->cap_nt_find) == 0) &&
@@ -1213,6 +1219,7 @@ const struct file_operations cifs_file_ops = {
 	.open = cifs_open,
 	.release = cifs_close,
 	.lock = cifs_lock,
+	.flock = cifs_flock,
 	.fsync = cifs_fsync,
 	.flush = cifs_flush,
 	.mmap  = cifs_file_mmap,
@@ -1232,6 +1239,7 @@ const struct file_operations cifs_file_strict_ops = {
 	.open = cifs_open,
 	.release = cifs_close,
 	.lock = cifs_lock,
+	.flock = cifs_flock,
 	.fsync = cifs_strict_fsync,
 	.flush = cifs_flush,
 	.mmap = cifs_file_strict_mmap,
@@ -1251,6 +1259,7 @@ const struct file_operations cifs_file_direct_ops = {
 	.open = cifs_open,
 	.release = cifs_close,
 	.lock = cifs_lock,
+	.flock = cifs_flock,
 	.fsync = cifs_fsync,
 	.flush = cifs_flush,
 	.mmap = cifs_file_mmap,
