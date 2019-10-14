@@ -13,7 +13,6 @@
 
 enum btrfs_trans_state {
 	TRANS_STATE_RUNNING,
-	TRANS_STATE_BLOCKED,
 	TRANS_STATE_COMMIT_START,
 	TRANS_STATE_COMMIT_DOING,
 	TRANS_STATE_UNBLOCKED,
@@ -218,8 +217,6 @@ int btrfs_record_root_in_trans(struct btrfs_trans_handle *trans,
 				struct btrfs_root *root);
 int btrfs_write_marked_extents(struct btrfs_fs_info *fs_info,
 				struct extent_io_tree *dirty_pages, int mark);
-int btrfs_wait_extents(struct btrfs_fs_info *fs_info,
-		       struct extent_io_tree *dirty_pages);
 int btrfs_wait_tree_log_extents(struct btrfs_root *root, int mark);
 int btrfs_transaction_blocked(struct btrfs_fs_info *info);
 int btrfs_transaction_in_commit(struct btrfs_fs_info *info);

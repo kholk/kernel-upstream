@@ -14,6 +14,7 @@
 #include <linux/prefetch.h>
 #include <linux/cleancache.h>
 #include "extent_io.h"
+#include "extent-io-tree.h"
 #include "extent_map.h"
 #include "ctree.h"
 #include "btrfs_inode.h"
@@ -59,11 +60,22 @@ void btrfs_leak_debug_del(struct list_head *entry)
 	spin_unlock_irqrestore(&leak_lock, flags);
 }
 
-static inline
-void btrfs_leak_debug_check(void)
+static inline void btrfs_extent_buffer_leak_debug_check(void)
+{
+	struct extent_buffer *eb;
+
+	while (!list_empty(&buffers)) {
+		eb = list_entry(buffers.next, struct extent_buffer, leak_list);
+		pr_err("BTRFS: buffer leak start %llu len %lu refs %d bflags %lu\n",
+		       eb->start, eb->len, atomic_read(&eb->refs), eb->bflags);
+		list_del(&eb->leak_list);
+		kmem_cache_free(extent_buffer_cache, eb);
+	}
+}
+
+static inline void btrfs_extent_state_leak_debug_check(void)
 {
 	struct extent_state *state;
-	struct extent_buffer *eb;
 
 	while (!list_empty(&states)) {
 		state = list_entry(states.next, struct extent_state, leak_list);
@@ -73,14 +85,6 @@ void btrfs_leak_debug_check(void)
 		       refcount_read(&state->refs));
 		list_del(&state->leak_list);
 		kmem_cache_free(extent_state_cache, state);
-	}
-
-	while (!list_empty(&buffers)) {
-		eb = list_entry(buffers.next, struct extent_buffer, leak_list);
-		pr_err("BTRFS: buffer leak start %llu len %lu refs %d bflags %lu\n",
-		       eb->start, eb->len, atomic_read(&eb->refs), eb->bflags);
-		list_del(&eb->leak_list);
-		kmem_cache_free(extent_buffer_cache, eb);
 	}
 }
 
@@ -105,7 +109,8 @@ static inline void __btrfs_debug_check_extent_io_range(const char *caller,
 #else
 #define btrfs_leak_debug_add(new, head)	do {} while (0)
 #define btrfs_leak_debug_del(entry)	do {} while (0)
-#define btrfs_leak_debug_check()	do {} while (0)
+#define btrfs_extent_buffer_leak_debug_check()	do {} while (0)
+#define btrfs_extent_state_leak_debug_check()	do {} while (0)
 #define btrfs_debug_check_extent_io_range(c, s, e)	do {} while (0)
 #endif
 
@@ -196,19 +201,23 @@ static int __must_check flush_write_bio(struct extent_page_data *epd)
 	return ret;
 }
 
-int __init extent_io_init(void)
+int __init extent_state_cache_init(void)
 {
 	extent_state_cache = kmem_cache_create("btrfs_extent_state",
 			sizeof(struct extent_state), 0,
 			SLAB_MEM_SPREAD, NULL);
 	if (!extent_state_cache)
 		return -ENOMEM;
+	return 0;
+}
 
+int __init extent_io_init(void)
+{
 	extent_buffer_cache = kmem_cache_create("btrfs_extent_buffer",
 			sizeof(struct extent_buffer), 0,
 			SLAB_MEM_SPREAD, NULL);
 	if (!extent_buffer_cache)
-		goto free_state_cache;
+		return -ENOMEM;
 
 	if (bioset_init(&btrfs_bioset, BIO_POOL_SIZE,
 			offsetof(struct btrfs_io_bio, bio),
@@ -226,23 +235,24 @@ free_bioset:
 free_buffer_cache:
 	kmem_cache_destroy(extent_buffer_cache);
 	extent_buffer_cache = NULL;
-
-free_state_cache:
-	kmem_cache_destroy(extent_state_cache);
-	extent_state_cache = NULL;
 	return -ENOMEM;
+}
+
+void __cold extent_state_cache_exit(void)
+{
+	btrfs_extent_state_leak_debug_check();
+	kmem_cache_destroy(extent_state_cache);
 }
 
 void __cold extent_io_exit(void)
 {
-	btrfs_leak_debug_check();
+	btrfs_extent_buffer_leak_debug_check();
 
 	/*
 	 * Make sure all delayed rcu free are flushed before we
 	 * destroy caches.
 	 */
 	rcu_barrier();
-	kmem_cache_destroy(extent_state_cache);
 	kmem_cache_destroy(extent_buffer_cache);
 	bioset_exit(&btrfs_bioset);
 }
@@ -1676,9 +1686,9 @@ out:
  *
  * true is returned if we find something, false if nothing was in the tree
  */
-static noinline bool find_delalloc_range(struct extent_io_tree *tree,
-					u64 *start, u64 *end, u64 max_bytes,
-					struct extent_state **cached_state)
+bool btrfs_find_delalloc_range(struct extent_io_tree *tree, u64 *start,
+			       u64 *end, u64 max_bytes,
+			       struct extent_state **cached_state)
 {
 	struct rb_node *node;
 	struct extent_state *state;
@@ -1796,8 +1806,8 @@ again:
 	/* step one, find a bunch of delalloc bytes starting at start */
 	delalloc_start = *start;
 	delalloc_end = 0;
-	found = find_delalloc_range(tree, &delalloc_start, &delalloc_end,
-				    max_bytes, &cached_state);
+	found = btrfs_find_delalloc_range(tree, &delalloc_start, &delalloc_end,
+					  max_bytes, &cached_state);
 	if (!found || delalloc_end <= *start) {
 		*start = delalloc_start;
 		*end = delalloc_end;
@@ -1899,7 +1909,7 @@ static int __process_pages_contig(struct address_space *mapping,
 			if (page_ops & PAGE_SET_PRIVATE2)
 				SetPagePrivate2(pages[i]);
 
-			if (pages[i] == locked_page) {
+			if (locked_page && pages[i] == locked_page) {
 				put_page(pages[i]);
 				pages_locked++;
 				continue;
@@ -2014,8 +2024,8 @@ out:
  * set the private field for a given byte offset in the tree.  If there isn't
  * an extent_state there already, this does nothing.
  */
-static noinline int set_state_failrec(struct extent_io_tree *tree, u64 start,
-		struct io_failure_record *failrec)
+int set_state_failrec(struct extent_io_tree *tree, u64 start,
+		      struct io_failure_record *failrec)
 {
 	struct rb_node *node;
 	struct extent_state *state;
@@ -2042,8 +2052,8 @@ out:
 	return ret;
 }
 
-static noinline int get_state_failrec(struct extent_io_tree *tree, u64 start,
-		struct io_failure_record **failrec)
+int get_state_failrec(struct extent_io_tree *tree, u64 start,
+		      struct io_failure_record **failrec)
 {
 	struct rb_node *node;
 	struct extent_state *state;
@@ -4240,8 +4250,12 @@ int extent_write_locked_range(struct inode *inode, u64 start, u64 end,
 		.nr_to_write	= nr_pages * 2,
 		.range_start	= start,
 		.range_end	= end + 1,
+		/* we're called from an async helper function */
+		.punt_to_cgroup	= 1,
+		.no_cgroup_owner = 1,
 	};
 
+	wbc_attach_fdatawrite_inode(&wbc_writepages, inode);
 	while (start <= end) {
 		page = find_get_page(mapping, start >> PAGE_SHIFT);
 		if (clear_page_dirty_for_io(page))
@@ -4256,11 +4270,12 @@ int extent_write_locked_range(struct inode *inode, u64 start, u64 end,
 	}
 
 	ASSERT(ret <= 0);
-	if (ret < 0) {
+	if (ret == 0)
+		ret = flush_write_bio(&epd);
+	else
 		end_write_bio(&epd, ret);
-		return ret;
-	}
-	ret = flush_write_bio(&epd);
+
+	wbc_detach_inode(&wbc_writepages);
 	return ret;
 }
 
@@ -5506,6 +5521,28 @@ unlock_exit:
 	return ret;
 }
 
+/*
+ * Check if the [start, start + len) range is valid before reading/writing
+ * the eb.
+ * NOTE: @start and @len are offset *INSIDE* the eb, *NOT* logical address.
+ *
+ * Caller should not touch the dst/src memory if this function returns error.
+ */
+static int check_eb_range(const struct extent_buffer *eb, unsigned long start,
+			  unsigned long len)
+{
+	/* start, start + len should not go beyond eb->len nor overflow */
+	if (unlikely(start > eb->len || start + len > eb->len ||
+		     len > eb->len)) {
+		btrfs_warn(eb->fs_info,
+"btrfs: bad eb rw request, eb bytenr=%llu len=%lu rw start=%lu len=%lu\n",
+			   eb->start, eb->len, start, len);
+		WARN_ON(IS_ENABLED(CONFIG_BTRFS_DEBUG));
+		return -EINVAL;
+	}
+	return 0;
+}
+
 void read_extent_buffer(const struct extent_buffer *eb, void *dstv,
 			unsigned long start, unsigned long len)
 {
@@ -5517,12 +5554,8 @@ void read_extent_buffer(const struct extent_buffer *eb, void *dstv,
 	size_t start_offset = offset_in_page(eb->start);
 	unsigned long i = (start_offset + start) >> PAGE_SHIFT;
 
-	if (start + len > eb->len) {
-		WARN(1, KERN_ERR "btrfs bad mapping eb start %llu len %lu, wanted %lu %lu\n",
-		     eb->start, eb->len, start, len);
-		memset(dst, 0, len);
+	if (check_eb_range(eb, start, len))
 		return;
-	}
 
 	offset = offset_in_page(start_offset + start);
 
@@ -5553,8 +5586,8 @@ int read_extent_buffer_to_user(const struct extent_buffer *eb,
 	unsigned long i = (start_offset + start) >> PAGE_SHIFT;
 	int ret = 0;
 
-	WARN_ON(start > eb->len);
-	WARN_ON(start + len > eb->start + eb->len);
+	if (check_eb_range(eb, start, len))
+		return -EINVAL;
 
 	offset = offset_in_page(start_offset + start);
 
@@ -5686,8 +5719,8 @@ void write_extent_buffer(struct extent_buffer *eb, const void *srcv,
 	size_t start_offset = offset_in_page(eb->start);
 	unsigned long i = (start_offset + start) >> PAGE_SHIFT;
 
-	WARN_ON(start > eb->len);
-	WARN_ON(start + len > eb->start + eb->len);
+	if (check_eb_range(eb, start, len))
+		return;
 
 	offset = offset_in_page(start_offset + start);
 
@@ -5716,8 +5749,8 @@ void memzero_extent_buffer(struct extent_buffer *eb, unsigned long start,
 	size_t start_offset = offset_in_page(eb->start);
 	unsigned long i = (start_offset + start) >> PAGE_SHIFT;
 
-	WARN_ON(start > eb->len);
-	WARN_ON(start + len > eb->start + eb->len);
+	if (check_eb_range(eb, start, len))
+		return;
 
 	offset = offset_in_page(start_offset + start);
 
@@ -5760,6 +5793,10 @@ void copy_extent_buffer(struct extent_buffer *dst, struct extent_buffer *src,
 	char *kaddr;
 	size_t start_offset = offset_in_page(dst->start);
 	unsigned long i = (start_offset + dst_offset) >> PAGE_SHIFT;
+
+	if (check_eb_range(dst, dst_offset, len) ||
+	    check_eb_range(src, src_offset, len))
+		return;
 
 	WARN_ON(src->len != dst_len);
 
@@ -5949,7 +5986,6 @@ static void copy_pages(struct page *dst_page, struct page *src_page,
 void memcpy_extent_buffer(struct extent_buffer *dst, unsigned long dst_offset,
 			   unsigned long src_offset, unsigned long len)
 {
-	struct btrfs_fs_info *fs_info = dst->fs_info;
 	size_t cur;
 	size_t dst_off_in_page;
 	size_t src_off_in_page;
@@ -5957,18 +5993,9 @@ void memcpy_extent_buffer(struct extent_buffer *dst, unsigned long dst_offset,
 	unsigned long dst_i;
 	unsigned long src_i;
 
-	if (src_offset + len > dst->len) {
-		btrfs_err(fs_info,
-			"memmove bogus src_offset %lu move len %lu dst len %lu",
-			 src_offset, len, dst->len);
-		BUG();
-	}
-	if (dst_offset + len > dst->len) {
-		btrfs_err(fs_info,
-			"memmove bogus dst_offset %lu move len %lu dst len %lu",
-			 dst_offset, len, dst->len);
-		BUG();
-	}
+	if (check_eb_range(dst, dst_offset, len) ||
+	    check_eb_range(dst, src_offset, len))
+		return;
 
 	while (len > 0) {
 		dst_off_in_page = offset_in_page(start_offset + dst_offset);
@@ -5994,7 +6021,6 @@ void memcpy_extent_buffer(struct extent_buffer *dst, unsigned long dst_offset,
 void memmove_extent_buffer(struct extent_buffer *dst, unsigned long dst_offset,
 			   unsigned long src_offset, unsigned long len)
 {
-	struct btrfs_fs_info *fs_info = dst->fs_info;
 	size_t cur;
 	size_t dst_off_in_page;
 	size_t src_off_in_page;
@@ -6004,18 +6030,9 @@ void memmove_extent_buffer(struct extent_buffer *dst, unsigned long dst_offset,
 	unsigned long dst_i;
 	unsigned long src_i;
 
-	if (src_offset + len > dst->len) {
-		btrfs_err(fs_info,
-			  "memmove bogus src_offset %lu move len %lu len %lu",
-			  src_offset, len, dst->len);
-		BUG();
-	}
-	if (dst_offset + len > dst->len) {
-		btrfs_err(fs_info,
-			  "memmove bogus dst_offset %lu move len %lu len %lu",
-			  dst_offset, len, dst->len);
-		BUG();
-	}
+	if (check_eb_range(dst, dst_offset, len) ||
+	    check_eb_range(dst, src_offset, len))
+		return;
 	if (dst_offset < src_offset) {
 		memcpy_extent_buffer(dst, dst_offset, src_offset, len);
 		return;
