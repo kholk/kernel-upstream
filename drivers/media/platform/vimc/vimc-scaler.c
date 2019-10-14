@@ -5,24 +5,17 @@
  * Copyright (C) 2015-2017 Helen Koike <helen.fornazier@gmail.com>
  */
 
-#include <linux/component.h>
-#include <linux/module.h>
-#include <linux/mod_devicetable.h>
-#include <linux/platform_device.h>
+#include <linux/moduleparam.h>
 #include <linux/vmalloc.h>
 #include <linux/v4l2-mediabus.h>
 #include <media/v4l2-subdev.h>
 
 #include "vimc-common.h"
 
-#define VIMC_SCA_DRV_NAME "vimc-scaler"
-
 static unsigned int sca_mult = 3;
 module_param(sca_mult, uint, 0000);
 MODULE_PARM_DESC(sca_mult, " the image size multiplier");
 
-#define IS_SINK(pad)	(!pad)
-#define IS_SRC(pad)	(pad)
 #define MAX_ZOOM	8
 
 struct vimc_sca_device {
@@ -98,7 +91,7 @@ static int vimc_sca_enum_frame_size(struct v4l2_subdev *sd,
 	fse->min_width = VIMC_FRAME_MIN_WIDTH;
 	fse->min_height = VIMC_FRAME_MIN_HEIGHT;
 
-	if (IS_SINK(fse->pad)) {
+	if (VIMC_IS_SINK(fse->pad)) {
 		fse->max_width = VIMC_FRAME_MAX_WIDTH;
 		fse->max_height = VIMC_FRAME_MAX_HEIGHT;
 	} else {
@@ -121,7 +114,7 @@ static int vimc_sca_get_fmt(struct v4l2_subdev *sd,
 			 vsca->sink_fmt;
 
 	/* Scale the frame size for the source pad */
-	if (IS_SRC(format->pad)) {
+	if (VIMC_IS_SRC(format->pad)) {
 		format->format.width = vsca->sink_fmt.width * sca_mult;
 		format->format.height = vsca->sink_fmt.height * sca_mult;
 	}
@@ -170,7 +163,7 @@ static int vimc_sca_set_fmt(struct v4l2_subdev *sd,
 	 * Do not change the format of the source pad,
 	 * it is propagated from the sink
 	 */
-	if (IS_SRC(fmt->pad)) {
+	if (VIMC_IS_SRC(fmt->pad)) {
 		fmt->format = *sink_fmt;
 		fmt->format.width = sink_fmt->width * sca_mult;
 		fmt->format.height = sink_fmt->height * sca_mult;
@@ -343,6 +336,7 @@ static void vimc_sca_release(struct v4l2_subdev *sd)
 	struct vimc_sca_device *vsca =
 				container_of(sd, struct vimc_sca_device, sd);
 
+	vimc_pads_cleanup(vsca->ved.pads);
 	kfree(vsca);
 }
 
@@ -350,89 +344,43 @@ static const struct v4l2_subdev_internal_ops vimc_sca_int_ops = {
 	.release = vimc_sca_release,
 };
 
-static void vimc_sca_comp_unbind(struct device *comp, struct device *master,
-				 void *master_data)
+void vimc_sca_rm(struct vimc_device *vimc, struct vimc_ent_device *ved)
 {
-	struct vimc_ent_device *ved = dev_get_drvdata(comp);
-	struct vimc_sca_device *vsca = container_of(ved, struct vimc_sca_device,
-						    ved);
+	struct vimc_sca_device *vsca;
 
+	vsca = container_of(ved, struct vimc_sca_device, ved);
 	vimc_ent_sd_unregister(ved, &vsca->sd);
 }
 
-
-static int vimc_sca_comp_bind(struct device *comp, struct device *master,
-			      void *master_data)
+struct vimc_ent_device *vimc_sca_add(struct vimc_device *vimc,
+				     const char *vcfg_name)
 {
-	struct v4l2_device *v4l2_dev = master_data;
-	struct vimc_platform_data *pdata = comp->platform_data;
+	struct v4l2_device *v4l2_dev = &vimc->v4l2_dev;
 	struct vimc_sca_device *vsca;
 	int ret;
 
 	/* Allocate the vsca struct */
 	vsca = kzalloc(sizeof(*vsca), GFP_KERNEL);
 	if (!vsca)
-		return -ENOMEM;
+		return NULL;
 
 	/* Initialize ved and sd */
 	ret = vimc_ent_sd_register(&vsca->ved, &vsca->sd, v4l2_dev,
-				   pdata->entity_name,
+				   vcfg_name,
 				   MEDIA_ENT_F_PROC_VIDEO_SCALER, 2,
 				   (const unsigned long[2]) {MEDIA_PAD_FL_SINK,
 				   MEDIA_PAD_FL_SOURCE},
 				   &vimc_sca_int_ops, &vimc_sca_ops);
 	if (ret) {
 		kfree(vsca);
-		return ret;
+		return NULL;
 	}
 
 	vsca->ved.process_frame = vimc_sca_process_frame;
-	dev_set_drvdata(comp, &vsca->ved);
-	vsca->dev = comp;
+	vsca->dev = &vimc->pdev.dev;
 
 	/* Initialize the frame format */
 	vsca->sink_fmt = sink_fmt_default;
 
-	return 0;
+	return &vsca->ved;
 }
-
-static const struct component_ops vimc_sca_comp_ops = {
-	.bind = vimc_sca_comp_bind,
-	.unbind = vimc_sca_comp_unbind,
-};
-
-static int vimc_sca_probe(struct platform_device *pdev)
-{
-	return component_add(&pdev->dev, &vimc_sca_comp_ops);
-}
-
-static int vimc_sca_remove(struct platform_device *pdev)
-{
-	component_del(&pdev->dev, &vimc_sca_comp_ops);
-
-	return 0;
-}
-
-static const struct platform_device_id vimc_sca_driver_ids[] = {
-	{
-		.name           = VIMC_SCA_DRV_NAME,
-	},
-	{ }
-};
-
-static struct platform_driver vimc_sca_pdrv = {
-	.probe		= vimc_sca_probe,
-	.remove		= vimc_sca_remove,
-	.id_table	= vimc_sca_driver_ids,
-	.driver		= {
-		.name	= VIMC_SCA_DRV_NAME,
-	},
-};
-
-module_platform_driver(vimc_sca_pdrv);
-
-MODULE_DEVICE_TABLE(platform, vimc_sca_driver_ids);
-
-MODULE_DESCRIPTION("Virtual Media Controller Driver (VIMC) Scaler");
-MODULE_AUTHOR("Helen Mae Koike Fornazier <helen.fornazier@gmail.com>");
-MODULE_LICENSE("GPL");
