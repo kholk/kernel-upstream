@@ -271,12 +271,14 @@ static inline void tx49_blast_icache32(void)
 	/* I'm in even chunk.  blast odd chunks */
 	for (ws = 0; ws < ws_end; ws += ws_inc)
 		for (addr = start + 0x400; addr < end; addr += 0x400 * 2)
-			cache32_unroll32(addr|ws, Index_Invalidate_I);
+			cache_unroll(32, kernel_cache, Index_Invalidate_I,
+				     addr | ws, 32);
 	CACHE32_UNROLL32_ALIGN;
 	/* I'm in odd chunk.  blast even chunks */
 	for (ws = 0; ws < ws_end; ws += ws_inc)
 		for (addr = start; addr < end; addr += 0x400 * 2)
-			cache32_unroll32(addr|ws, Index_Invalidate_I);
+			cache_unroll(32, kernel_cache, Index_Invalidate_I,
+				     addr | ws, 32);
 }
 
 static inline void blast_icache32_r4600_v1_page_indexed(unsigned long page)
@@ -302,12 +304,14 @@ static inline void tx49_blast_icache32_page_indexed(unsigned long page)
 	/* I'm in even chunk.  blast odd chunks */
 	for (ws = 0; ws < ws_end; ws += ws_inc)
 		for (addr = start + 0x400; addr < end; addr += 0x400 * 2)
-			cache32_unroll32(addr|ws, Index_Invalidate_I);
+			cache_unroll(32, kernel_cache, Index_Invalidate_I,
+				     addr | ws, 32);
 	CACHE32_UNROLL32_ALIGN;
 	/* I'm in odd chunk.  blast even chunks */
 	for (ws = 0; ws < ws_end; ws += ws_inc)
 		for (addr = start; addr < end; addr += 0x400 * 2)
-			cache32_unroll32(addr|ws, Index_Invalidate_I);
+			cache_unroll(32, kernel_cache, Index_Invalidate_I,
+				     addr | ws, 32);
 }
 
 static void (* r4k_blast_icache_page)(unsigned long addr);
@@ -1267,7 +1271,8 @@ static void probe_pcache(void)
 					  c->dcache.ways *
 					  c->dcache.linesz;
 		c->dcache.waybit = 0;
-		if ((prid & PRID_REV_MASK) >= PRID_REV_LOONGSON3A_R2_0)
+		if ((c->processor_id & (PRID_IMP_MASK | PRID_REV_MASK)) >=
+				(PRID_IMP_LOONGSON_64C | PRID_REV_LOONGSON3A_R2_0))
 			c->options |= MIPS_CPU_PREFETCH;
 		break;
 

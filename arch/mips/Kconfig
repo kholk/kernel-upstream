@@ -7,6 +7,7 @@ config MIPS
 	select ARCH_CLOCKSOURCE_DATA
 	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
 	select ARCH_HAS_UBSAN_SANITIZE_ALL
+	select ARCH_HAS_FORTIFY_SOURCE
 	select ARCH_SUPPORTS_UPROBES
 	select ARCH_USE_BUILTIN_BSWAP
 	select ARCH_USE_CMPXCHG_LOCKREF if 64BIT
@@ -359,6 +360,8 @@ config MACH_DECSTATION
 
 config MACH_JAZZ
 	bool "Jazz family of machines"
+	select ARC_MEMORY
+	select ARC_PROMLIB
 	select ARCH_MIGHT_HAVE_PC_PARPORT
 	select ARCH_MIGHT_HAVE_PC_SERIO
 	select FW_ARC
@@ -631,6 +634,8 @@ config RALINK
 
 config SGI_IP22
 	bool "SGI IP22 (Indy/Indigo2)"
+	select ARC_MEMORY
+	select ARC_PROMLIB
 	select FW_ARC
 	select FW_ARC32
 	select ARCH_MIGHT_HAVE_PC_SERIO
@@ -654,14 +659,7 @@ config SGI_IP22
 	select SWAP_IO_SPACE
 	select SYS_HAS_CPU_R4X00
 	select SYS_HAS_CPU_R5000
-	#
-	# Disable EARLY_PRINTK for now since it leads to overwritten prom
-	# memory during early boot on some machines.
-	#
-	# See http://www.linux-mips.org/cgi-bin/mesg.cgi?a=linux-mips&i=20091119164009.GA15038%40deprecation.cyrius.com
-	# for a more details discussion
-	#
-	# select SYS_HAS_EARLY_PRINTK
+	select SYS_HAS_EARLY_PRINTK
 	select SYS_SUPPORTS_32BIT_KERNEL
 	select SYS_SUPPORTS_64BIT_KERNEL
 	select SYS_SUPPORTS_BIG_ENDIAN
@@ -674,6 +672,7 @@ config SGI_IP22
 config SGI_IP27
 	bool "SGI IP27 (Origin200/2000)"
 	select ARCH_HAS_PHYS_TO_DMA
+	select ARCH_SPARSEMEM_ENABLE
 	select FW_ARC
 	select FW_ARC64
 	select BOOT_ELF64
@@ -698,6 +697,8 @@ config SGI_IP27
 
 config SGI_IP28
 	bool "SGI IP28 (Indigo2 R10k)"
+	select ARC_MEMORY
+	select ARC_PROMLIB
 	select FW_ARC
 	select FW_ARC64
 	select ARCH_MIGHT_HAVE_PC_SERIO
@@ -719,14 +720,7 @@ config SGI_IP28
 	select SGI_HAS_ZILOG
 	select SWAP_IO_SPACE
 	select SYS_HAS_CPU_R10000
-	#
-	# Disable EARLY_PRINTK for now since it leads to overwritten prom
-	# memory during early boot on some machines.
-	#
-	# See http://www.linux-mips.org/cgi-bin/mesg.cgi?a=linux-mips&i=20091119164009.GA15038%40deprecation.cyrius.com
-	# for a more details discussion
-	#
-	# select SYS_HAS_EARLY_PRINTK
+	select SYS_HAS_EARLY_PRINTK
 	select SYS_SUPPORTS_64BIT_KERNEL
 	select SYS_SUPPORTS_BIG_ENDIAN
 	select MIPS_L1_CACHE_SHIFT_7
@@ -736,6 +730,8 @@ config SGI_IP28
 
 config SGI_IP32
 	bool "SGI IP32 (O2)"
+	select ARC_MEMORY
+	select ARC_PROMLIB
 	select ARCH_HAS_PHYS_TO_DMA
 	select FW_ARC
 	select FW_ARC32
@@ -843,6 +839,8 @@ config SIBYTE_BIGSUR
 
 config SNI_RM
 	bool "SNI RM200/300/400"
+	select ARC_MEMORY
+	select ARC_PROMLIB
 	select FW_ARC if CPU_LITTLE_ENDIAN
 	select FW_ARC32 if CPU_LITTLE_ENDIAN
 	select FW_SNIPROM if CPU_BIG_ENDIAN
@@ -1359,13 +1357,9 @@ config ARC_CONSOLE
 
 config ARC_MEMORY
 	bool
-	depends on MACH_JAZZ || SNI_RM || SGI_IP32
-	default y
 
 config ARC_PROMLIB
 	bool
-	depends on MACH_JAZZ || SNI_RM || SGI_IP22 || SGI_IP28 || SGI_IP32
-	default y
 
 config FW_ARC64
 	bool
@@ -1386,9 +1380,11 @@ config CPU_LOONGSON3
 	select CPU_SUPPORTS_64BIT_KERNEL
 	select CPU_SUPPORTS_HIGHMEM
 	select CPU_SUPPORTS_HUGEPAGES
+	select CPU_SUPPORTS_MSA
 	select CPU_HAS_LOAD_STORE_LR
 	select WEAK_ORDERING
 	select WEAK_REORDERING_BEYOND_LLSC
+	select MIPS_ASID_BITS_VARIABLE
 	select MIPS_PGD_C0_CONTEXT
 	select MIPS_L1_CACHE_SHIFT_6
 	select GPIOLIB
@@ -2554,6 +2550,10 @@ config CPU_R4000_WORKAROUNDS
 config CPU_R4400_WORKAROUNDS
 	bool
 
+config CPU_R4X00_BUGS64
+	bool
+	default y if SYS_HAS_CPU_R4X00 && 64BIT && (TARGET_ISA_REV < 1)
+
 config MIPS_ASID_SHIFT
 	int
 	default 6 if CPU_R3000 || CPU_TX39XX
@@ -2614,18 +2614,9 @@ config ARCH_FLATMEM_ENABLE
 	def_bool y
 	depends on !NUMA && !CPU_LOONGSON2
 
-config ARCH_DISCONTIGMEM_ENABLE
-	bool
-	default y if SGI_IP27
-	help
-	  Say Y to support efficient handling of discontiguous physical memory,
-	  for architectures which are either NUMA (Non-Uniform Memory Access)
-	  or have huge holes in the physical address space for other reasons.
-	  See <file:Documentation/vm/numa.rst> for more.
-
 config ARCH_SPARSEMEM_ENABLE
 	bool
-	select SPARSEMEM_STATIC
+	select SPARSEMEM_STATIC if !SGI_IP27
 
 config NUMA
 	bool "NUMA Support"
