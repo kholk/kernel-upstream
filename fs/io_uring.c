@@ -3016,7 +3016,6 @@ static int __io_sqe_files_scm(struct io_ring_ctx *ctx, int nr, int offset)
 	}
 
 	skb->sk = sk;
-	skb->destructor = io_destruct_skb;
 
 	nr_files = 0;
 	fpl->user = get_uid(ctx->user);
@@ -3029,8 +3028,10 @@ static int __io_sqe_files_scm(struct io_ring_ctx *ctx, int nr, int offset)
 	}
 
 	if (nr_files) {
-		fpl->max = fpl->count = nr_files;
+		fpl->max = SCM_MAX_FD;
+		fpl->count = nr_files;
 		UNIXCB(skb).fp = fpl;
+		skb->destructor = io_destruct_skb;
 		refcount_add(skb->truesize, &sk->sk_wmem_alloc);
 		skb_queue_head(&sk->sk_receive_queue, skb);
 
