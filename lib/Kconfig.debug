@@ -1982,6 +1982,18 @@ config SYSCTL_KUNIT_TEST
 
 	  If unsure, say N.
 
+config LIST_TEST
+	bool "KUnit Test for Kernel Linked-list structures"
+	depends on KUNIT
+	help
+	  This builds the linked list unit test, which runs on boot.
+	  It tests that the API and basic functionality of the list_head type
+	  and associated macros.
+	  For more information on KUnit and unit tests in general please refer
+	  to the KUnit documentation in Documentation/dev-tools/kunit/.
+
+	  If unsure, say N.
+
 config TEST_UDELAY
 	tristate "udelay test driver"
 	help
