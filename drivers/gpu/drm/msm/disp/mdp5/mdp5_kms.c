@@ -19,10 +19,6 @@
 #include "msm_mmu.h"
 #include "mdp5_kms.h"
 
-static const char *iommu_ports[] = {
-		"mdp_0",
-};
-
 static int mdp5_hw_init(struct msm_kms *kms)
 {
 	struct mdp5_kms *mdp5_kms = to_mdp5_kms(to_mdp_kms(kms));
@@ -233,8 +229,7 @@ static void mdp5_kms_destroy(struct msm_kms *kms)
 		mdp5_pipe_destroy(mdp5_kms->hwpipes[i]);
 
 	if (aspace) {
-		aspace->mmu->funcs->detach(aspace->mmu,
-				iommu_ports, ARRAY_SIZE(iommu_ports));
+		aspace->mmu->funcs->detach(aspace->mmu);
 		msm_gem_address_space_put(aspace);
 	}
 }
@@ -466,13 +461,10 @@ static int modeset_init(struct mdp5_kms *mdp5_kms)
 {
 	struct drm_device *dev = mdp5_kms->dev;
 	struct msm_drm_private *priv = dev->dev_private;
-	const struct mdp5_cfg_hw *hw_cfg;
 	unsigned int num_crtcs;
 	int i, ret, pi = 0, ci = 0;
 	struct drm_plane *primary[MAX_BASES] = { NULL };
 	struct drm_plane *cursor[MAX_BASES] = { NULL };
-
-	hw_cfg = mdp5_cfg_get_hw_config(mdp5_kms->cfg);
 
 	/*
 	 * Construct encoders and modeset initialize connector devices
@@ -737,8 +729,7 @@ struct msm_kms *mdp5_kms_init(struct drm_device *dev)
 
 		kms->aspace = aspace;
 
-		ret = aspace->mmu->funcs->attach(aspace->mmu, iommu_ports,
-				ARRAY_SIZE(iommu_ports));
+		ret = aspace->mmu->funcs->attach(aspace->mmu);
 		if (ret) {
 			DRM_DEV_ERROR(&pdev->dev, "failed to attach iommu: %d\n",
 				ret);
