@@ -123,7 +123,7 @@ static void at91_stop_hc(struct platform_device *pdev)
 	/*
 	 * Put the USB host controller into reset.
 	 */
-	writel(0, &regs->control);
+	usb_hcd_platform_shutdown(pdev);
 
 	/*
 	 * Stop the USB clocks.
@@ -628,6 +628,7 @@ ohci_hcd_at91_drv_suspend(struct device *dev)
 
 		/* flush the writes */
 		(void) ohci_readl (ohci, &ohci->regs->control);
+		msleep(1);
 		at91_stop_clock(ohci_at91);
 	}
 
@@ -642,8 +643,8 @@ ohci_hcd_at91_drv_resume(struct device *dev)
 
 	if (ohci_at91->wakeup)
 		disable_irq_wake(hcd->irq);
-
-	at91_start_clock(ohci_at91);
+	else
+		at91_start_clock(ohci_at91);
 
 	ohci_resume(hcd, false);
 
