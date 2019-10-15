@@ -1077,9 +1077,12 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
 
 retry:
 	/*
-	 * Preload this CPU with one extra vmap_area object to ensure
-	 * that we have it available when fit type of free area is
-	 * NE_FIT_TYPE.
+	 * Preload this CPU with one extra vmap_area object. It is used
+	 * when fit type of free area is NE_FIT_TYPE. Please note, it
+	 * does not guarantee that an allocation occurs on a CPU that
+	 * is preloaded, instead we minimize the case when it is not.
+	 * It can happen because of migration, because there is a race
+	 * until the below spinlock is taken.
 	 *
 	 * The preload is done in non-atomic context, thus it allows us
 	 * to use more permissive allocation masks to be more stable under
@@ -1088,20 +1091,16 @@ retry:
 	 * Even if it fails we do not really care about that. Just proceed
 	 * as it is. "overflow" path will refill the cache we allocate from.
 	 */
-	preempt_disable();
-	if (!__this_cpu_read(ne_fit_preload_node)) {
-		preempt_enable();
+	if (!this_cpu_read(ne_fit_preload_node)) {
 		pva = kmem_cache_alloc_node(vmap_area_cachep, GFP_KERNEL, node);
-		preempt_disable();
 
-		if (__this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva)) {
+		if (this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva)) {
 			if (pva)
 				kmem_cache_free(vmap_area_cachep, pva);
 		}
 	}
 
 	spin_lock(&vmap_area_lock);
-	preempt_enable();
 
 	/*
 	 * If an allocation fails, the "vend" address is
