@@ -1177,6 +1177,7 @@ static noinline void __init kernel_init_freeable(void)
 	workqueue_init();
 
 	init_mm_internals();
+	debug_vm_pgtable();
 
 	do_pre_smp_initcalls();
 	lockup_detector_init();
