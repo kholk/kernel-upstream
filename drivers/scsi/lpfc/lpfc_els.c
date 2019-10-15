@@ -4291,6 +4291,11 @@ lpfc_cmpl_els_rsp(struct lpfc_hba *phba, struct lpfc_iocbq *cmdiocb,
 
 	irsp = &rspiocb->iocb;
 
+	if (!vport) {
+		lpfc_printf_vlog(vport, KERN_ERR, LOG_ELS,
+				 "3177 ELS response failed\n");
+		goto out;
+	}
 	if (cmdiocb->context_un.mbox)
 		mbox = cmdiocb->context_un.mbox;
 
@@ -7986,20 +7991,22 @@ lpfc_els_flush_cmd(struct lpfc_vport *vport)
 	struct lpfc_sli_ring *pring;
 	struct lpfc_iocbq *tmp_iocb, *piocb;
 	IOCB_t *cmd = NULL;
+	unsigned long iflags = 0;
 
 	lpfc_fabric_abort_vport(vport);
+
 	/*
 	 * For SLI3, only the hbalock is required.  But SLI4 needs to coordinate
 	 * with the ring insert operation.  Because lpfc_sli_issue_abort_iotag
 	 * ultimately grabs the ring_lock, the driver must splice the list into
 	 * a working list and release the locks before calling the abort.
 	 */
-	spin_lock_irq(&phba->hbalock);
+	spin_lock_irqsave(&phba->hbalock, iflags);
 	pring = lpfc_phba_elsring(phba);
 
 	/* Bail out if we've no ELS wq, like in PCI error recovery case. */
 	if (unlikely(!pring)) {
-		spin_unlock_irq(&phba->hbalock);
+		spin_unlock_irqrestore(&phba->hbalock, iflags);
 		return;
 	}
 
@@ -8012,6 +8019,9 @@ lpfc_els_flush_cmd(struct lpfc_vport *vport)
 			continue;
 
 		if (piocb->vport != vport)
+			continue;
+
+		if (piocb->iocb_flag & LPFC_DRIVER_ABORTED)
 			continue;
 
 		/* On the ELS ring we can have ELS_REQUESTs or
@@ -8037,21 +8047,21 @@ lpfc_els_flush_cmd(struct lpfc_vport *vport)
 
 	if (phba->sli_rev == LPFC_SLI_REV4)
 		spin_unlock(&pring->ring_lock);
-	spin_unlock_irq(&phba->hbalock);
+	spin_unlock_irqrestore(&phba->hbalock, iflags);
 
 	/* Abort each txcmpl iocb on aborted list and remove the dlist links. */
 	list_for_each_entry_safe(piocb, tmp_iocb, &abort_list, dlist) {
-		spin_lock_irq(&phba->hbalock);
+		spin_lock_irqsave(&phba->hbalock, iflags);
 		list_del_init(&piocb->dlist);
 		lpfc_sli_issue_abort_iotag(phba, pring, piocb);
-		spin_unlock_irq(&phba->hbalock);
+		spin_unlock_irqrestore(&phba->hbalock, iflags);
 	}
 	if (!list_empty(&abort_list))
 		lpfc_printf_vlog(vport, KERN_ERR, LOG_ELS,
 				 "3387 abort list for txq not empty\n");
 	INIT_LIST_HEAD(&abort_list);
 
-	spin_lock_irq(&phba->hbalock);
+	spin_lock_irqsave(&phba->hbalock, iflags);
 	if (phba->sli_rev == LPFC_SLI_REV4)
 		spin_lock(&pring->ring_lock);
 
@@ -8091,7 +8101,7 @@ lpfc_els_flush_cmd(struct lpfc_vport *vport)
 
 	if (phba->sli_rev == LPFC_SLI_REV4)
 		spin_unlock(&pring->ring_lock);
-	spin_unlock_irq(&phba->hbalock);
+	spin_unlock_irqrestore(&phba->hbalock, iflags);
 
 	/* Cancel all the IOCBs from the completions list */
 	lpfc_sli_cancel_iocbs(phba, &abort_list,
