@@ -560,29 +560,24 @@ void update_sta_info_apmode(struct adapter *padapter, struct sta_info *psta)
 
 static void update_hw_ht_param(struct adapter *padapter)
 {
-	unsigned char		max_AMPDU_len;
-	unsigned char		min_MPDU_spacing;
-	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &pmlmeext->mlmext_info;
+	u8 max_ampdu_len;
+	u8 min_mpdu_spacing;
+	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info *pmlmeinfo = &pmlmeext->mlmext_info;
 
 	DBG_88E("%s\n", __func__);
 
-	/* handle A-MPDU parameter field */
-	/*
-		ampdu_params_info [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
-		ampdu_params_info [4:2]:Min MPDU Start Spacing
-	*/
-	max_AMPDU_len = pmlmeinfo->HT_caps.ampdu_params_info & 0x03;
+	/* handle A-MPDU parameter field
+	 * ampdu_params_info [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
+	 * ampdu_params_info [4:2]:Min MPDU Start Spacing
+	 */
+	max_ampdu_len = pmlmeinfo->HT_caps.ampdu_params_info & 0x03;
+	min_mpdu_spacing = (pmlmeinfo->HT_caps.ampdu_params_info & 0x1c) >> 2;
 
-	min_MPDU_spacing = (pmlmeinfo->HT_caps.ampdu_params_info & 0x1c) >> 2;
+	rtw_hal_set_hwreg(padapter, HW_VAR_AMPDU_MIN_SPACE, &min_mpdu_spacing);
+	rtw_hal_set_hwreg(padapter, HW_VAR_AMPDU_FACTOR, &max_ampdu_len);
 
-	rtw_hal_set_hwreg(padapter, HW_VAR_AMPDU_MIN_SPACE, (u8 *)(&min_MPDU_spacing));
-
-	rtw_hal_set_hwreg(padapter, HW_VAR_AMPDU_FACTOR, (u8 *)(&max_AMPDU_len));
-
-	/*  */
-	/*  Config SM Power Save setting */
-	/*  */
+	/* Config SM Power Save setting */
 	pmlmeinfo->SM_PS = (le16_to_cpu(pmlmeinfo->HT_caps.cap_info) & 0x0C) >> 2;
 	if (pmlmeinfo->SM_PS == WLAN_HT_CAP_SM_PS_STATIC)
 		DBG_88E("%s(): WLAN_HT_CAP_SM_PS_STATIC\n", __func__);
