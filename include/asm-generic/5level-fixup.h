@@ -48,8 +48,6 @@ static inline int p4d_present(p4d_t p4d)
 #define __p4d(x)			__pgd(x)
 #define set_p4d(p4dp, p4d)		set_pgd(p4dp, p4d)
 
-#undef p4d_free_tlb
-#define p4d_free_tlb(tlb, x, addr)	do { } while (0)
 #define p4d_free(mm, x)			do { } while (0)
 #define __p4d_free_tlb(tlb, x, addr)	do { } while (0)
 
