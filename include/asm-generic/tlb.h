@@ -598,7 +598,7 @@ static inline void tlb_end_vma(struct mmu_gather *tlb, struct vm_area_struct *vm
 #define pud_free_tlb(tlb, pudp, address)	do { } while (0)
 #endif
 
-#ifndef __ARCH_HAS_5LEVEL_HACK
+#ifndef __PAGETABLE_P4D_FOLDED
 #ifndef p4d_free_tlb
 #define p4d_free_tlb(tlb, pudp, address)			\
 	do {							\
@@ -607,6 +607,8 @@ static inline void tlb_end_vma(struct mmu_gather *tlb, struct vm_area_struct *vm
 		__p4d_free_tlb(tlb, pudp, address);		\
 	} while (0)
 #endif
+#else
+#define p4d_free_tlb(tlb, pudp, address)	do { } while (0)
 #endif
 
 #endif /* CONFIG_MMU */
