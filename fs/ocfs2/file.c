@@ -2139,9 +2139,8 @@ static int ocfs2_inode_lock_for_extent_tree(struct inode *inode,
 	else
 		ret = ocfs2_try_inode_lock(inode,
 			overwrite_io ? NULL : di_bh, meta_level);
-	if (ret < 0) {
+	if (ret < 0)
 		goto out;
-	}
 
 	if (wait) {
 		if (write_sem)
