@@ -25,20 +25,6 @@ static u32 share_count_disp;
 static u32 share_count_pdm;
 static u32 share_count_nand;
 
-enum {
-	ARM_PLL,
-	GPU_PLL,
-	VPU_PLL,
-	SYS_PLL1,
-	SYS_PLL2,
-	SYS_PLL3,
-	DRAM_PLL,
-	AUDIO_PLL1,
-	AUDIO_PLL2,
-	VIDEO_PLL2,
-	NR_PLLS,
-};
-
 static const char * const pll_ref_sels[] = { "osc_24m", "dummy", "dummy", "dummy", };
 static const char * const audio_pll1_bypass_sels[] = {"audio_pll1", "audio_pll1_ref_sel", };
 static const char * const audio_pll2_bypass_sels[] = {"audio_pll2", "audio_pll2_ref_sel", };
