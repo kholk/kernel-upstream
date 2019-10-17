@@ -2590,13 +2590,12 @@ static int pin_down_extent(struct btrfs_block_group_cache *cache,
 	return 0;
 }
 
-/*
- * this function must be called within transaction
- */
 int btrfs_pin_extent(struct btrfs_fs_info *fs_info,
 		     u64 bytenr, u64 num_bytes, int reserved)
 {
 	struct btrfs_block_group_cache *cache;
+
+	ASSERT(fs_info->running_transaction);
 
 	cache = btrfs_lookup_block_group(fs_info, bytenr);
 	BUG_ON(!cache); /* Logic error */
@@ -5436,7 +5435,7 @@ int btrfs_drop_subtree(struct btrfs_trans_handle *trans,
 
 	btrfs_assert_tree_locked(parent);
 	parent_level = btrfs_header_level(parent);
-	extent_buffer_get(parent);
+	atomic_inc(&parent->refs);
 	path->nodes[parent_level] = parent;
 	path->slots[parent_level] = btrfs_header_nritems(parent);
 

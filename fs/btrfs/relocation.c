@@ -2246,7 +2246,7 @@ static noinline_for_stack int merge_reloc_root(struct reloc_control *rc,
 
 	if (btrfs_disk_key_objectid(&root_item->drop_progress) == 0) {
 		level = btrfs_root_level(root_item);
-		extent_buffer_get(reloc_root->node);
+		atomic_inc(&reloc_root->node->refs);
 		path->nodes[level] = reloc_root->node;
 		path->slots[level] = 0;
 	} else {
@@ -3560,7 +3560,7 @@ static int delete_block_group_cache(struct btrfs_fs_info *fs_info,
 	key.type = BTRFS_INODE_ITEM_KEY;
 	key.offset = 0;
 
-	inode = btrfs_iget(fs_info->sb, &key, root, NULL);
+	inode = btrfs_iget(fs_info->sb, &key, root);
 	if (IS_ERR(inode))
 		return -ENOENT;
 
@@ -4246,7 +4246,7 @@ struct inode *create_reloc_inode(struct btrfs_fs_info *fs_info,
 	key.objectid = objectid;
 	key.type = BTRFS_INODE_ITEM_KEY;
 	key.offset = 0;
-	inode = btrfs_iget(fs_info->sb, &key, root, NULL);
+	inode = btrfs_iget(fs_info->sb, &key, root);
 	BUG_ON(IS_ERR(inode));
 	BTRFS_I(inode)->index_cnt = group->key.objectid;
 
@@ -4688,7 +4688,7 @@ int btrfs_reloc_cow_block(struct btrfs_trans_handle *trans,
 		       node->new_bytenr != buf->start);
 
 		drop_node_buffer(node);
-		extent_buffer_get(cow);
+		atomic_inc(&cow->refs);
 		node->eb = cow;
 		node->new_bytenr = cow->start;
 
