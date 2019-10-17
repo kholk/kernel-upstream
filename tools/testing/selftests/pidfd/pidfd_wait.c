@@ -54,7 +54,7 @@ static int test_pidfd_wait_simple(void)
 		ksft_exit_fail_msg("%s test: failed to open /proc/self %s\n",
 				   test_name, strerror(errno));
 
-	pid = sys_waitid(P_PIDFD, pidfd, &info, WEXITED, NULL);
+	pid = sys_waitid(__P_PIDFD, pidfd, &info, WEXITED, NULL);
 	if (pid == 0)
 		ksft_exit_fail_msg(
 			"%s test: succeeded to wait on invalid pidfd %s\n",
@@ -67,7 +67,7 @@ static int test_pidfd_wait_simple(void)
 		ksft_exit_fail_msg("%s test: failed to open /dev/null %s\n",
 				   test_name, strerror(errno));
 
-	pid = sys_waitid(P_PIDFD, pidfd, &info, WEXITED, NULL);
+	pid = sys_waitid(__P_PIDFD, pidfd, &info, WEXITED, NULL);
 	if (pid == 0)
 		ksft_exit_fail_msg(
 			"%s test: succeeded to wait on invalid pidfd %s\n",
@@ -83,7 +83,7 @@ static int test_pidfd_wait_simple(void)
 	if (pid == 0)
 		exit(EXIT_SUCCESS);
 
-	pid = sys_waitid(P_PIDFD, pidfd, &info, WEXITED, NULL);
+	pid = sys_waitid(__P_PIDFD, pidfd, &info, WEXITED, NULL);
 	if (pid < 0)
 		ksft_exit_fail_msg(
 			"%s test: failed to wait on process with pid %d and pidfd %d: %s\n",
@@ -145,7 +145,7 @@ static int test_pidfd_wait_states(void)
 		exit(EXIT_SUCCESS);
 	}
 
-	ret = sys_waitid(P_PIDFD, pidfd, &info, WSTOPPED, NULL);
+	ret = sys_waitid(__P_PIDFD, pidfd, &info, WSTOPPED, NULL);
 	if (ret < 0)
 		ksft_exit_fail_msg(
 			"%s test: failed to wait on WSTOPPED process with pid %d and pidfd %d: %s\n",
@@ -175,7 +175,7 @@ static int test_pidfd_wait_states(void)
 			"%s test: failed to send signal to process with pid %d and pidfd %d: %s\n",
 			test_name, parent_tid, pidfd, strerror(errno));
 
-	ret = sys_waitid(P_PIDFD, pidfd, &info, WCONTINUED, NULL);
+	ret = sys_waitid(__P_PIDFD, pidfd, &info, WCONTINUED, NULL);
 	if (ret < 0)
 		ksft_exit_fail_msg(
 			"%s test: failed to wait WCONTINUED on process with pid %d and pidfd %d: %s\n",
@@ -199,7 +199,7 @@ static int test_pidfd_wait_states(void)
 			test_name, info.si_pid, parent_tid, pidfd,
 			strerror(errno));
 
-	ret = sys_waitid(P_PIDFD, pidfd, &info, WUNTRACED, NULL);
+	ret = sys_waitid(__P_PIDFD, pidfd, &info, WUNTRACED, NULL);
 	if (ret < 0)
 		ksft_exit_fail_msg(
 			"%s test: failed to wait on WUNTRACED process with pid %d and pidfd %d: %s\n",
@@ -229,7 +229,7 @@ static int test_pidfd_wait_states(void)
 			"%s test: failed to send SIGKILL to process with pid %d and pidfd %d: %s\n",
 			test_name, parent_tid, pidfd, strerror(errno));
 
-	ret = sys_waitid(P_PIDFD, pidfd, &info, WEXITED, NULL);
+	ret = sys_waitid(__P_PIDFD, pidfd, &info, WEXITED, NULL);
 	if (ret < 0)
 		ksft_exit_fail_msg(
 			"%s test: failed to wait on WEXITED process with pid %d and pidfd %d: %s\n",

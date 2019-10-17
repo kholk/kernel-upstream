@@ -16,8 +16,8 @@
 
 #include "../kselftest.h"
 
-#ifndef P_PIDFD
-#define P_PIDFD 3
+#ifndef __P_PIDFD
+#define __P_PIDFD 3
 #endif
 
 #ifndef CLONE_PIDFD
