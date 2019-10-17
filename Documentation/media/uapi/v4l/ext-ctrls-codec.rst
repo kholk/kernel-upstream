@@ -1796,7 +1796,7 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       -
     * - __u32
       - ``dec_ref_pic_marking_bit_size``
-      -
+      - Size in bits of the dec_ref_pic_marking() syntax element.
     * - __u32
       - ``pic_order_cnt_bit_size``
       -
@@ -1820,10 +1820,12 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       -
     * - __u8
       - ``num_ref_idx_l0_active_minus1``
-      -
+      - If num_ref_idx_active_override_flag is not set, this field must be
+        set to the value of num_ref_idx_l0_default_active_minus1.
     * - __u8
       - ``num_ref_idx_l1_active_minus1``
-      -
+      - If num_ref_idx_active_override_flag is not set, this field must be
+        set to the value of num_ref_idx_l1_default_active_minus1.
     * - __u32
       - ``slice_group_change_cycle``
       -

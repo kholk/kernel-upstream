@@ -62,34 +62,31 @@ static inline struct cedrus_ctx *cedrus_file2ctx(struct file *file)
 static struct cedrus_format *cedrus_find_format(u32 pixelformat, u32 directions,
 						unsigned int capabilities)
 {
+	struct cedrus_format *first_valid_fmt = NULL;
 	struct cedrus_format *fmt;
 	unsigned int i;
 
 	for (i = 0; i < CEDRUS_FORMATS_COUNT; i++) {
 		fmt = &cedrus_formats[i];
 
-		if (fmt->capabilities && (fmt->capabilities & capabilities) !=
-		    fmt->capabilities)
+		if ((fmt->capabilities & capabilities) != fmt->capabilities ||
+		    !(fmt->directions & directions))
 			continue;
 
-		if (fmt->pixelformat == pixelformat &&
-		    (fmt->directions & directions) != 0)
+		if (fmt->pixelformat == pixelformat)
 			break;
+
+		if (!first_valid_fmt)
+			first_valid_fmt = fmt;
 	}
 
 	if (i == CEDRUS_FORMATS_COUNT)
-		return NULL;
+		return first_valid_fmt;
 
 	return &cedrus_formats[i];
 }
 
-static bool cedrus_check_format(u32 pixelformat, u32 directions,
-				unsigned int capabilities)
-{
-	return cedrus_find_format(pixelformat, directions, capabilities);
-}
-
-static void cedrus_prepare_format(struct v4l2_pix_format *pix_fmt)
+void cedrus_prepare_format(struct v4l2_pix_format *pix_fmt)
 {
 	unsigned int width = pix_fmt->width;
 	unsigned int height = pix_fmt->height;
@@ -107,7 +104,8 @@ static void cedrus_prepare_format(struct v4l2_pix_format *pix_fmt)
 	case V4L2_PIX_FMT_H264_SLICE:
 		/* Zero bytes per line for encoded source. */
 		bytesperline = 0;
-
+		/* Choose some minimum size since this can't be 0 */
+		sizeimage = max_t(u32, SZ_1K, sizeimage);
 		break;
 
 	case V4L2_PIX_FMT_SUNXI_TILED_NV12:
@@ -214,16 +212,7 @@ static int cedrus_g_fmt_vid_cap(struct file *file, void *priv,
 {
 	struct cedrus_ctx *ctx = cedrus_file2ctx(file);
 
-	/* Fall back to dummy default by lack of hardware configuration. */
-	if (!ctx->dst_fmt.width || !ctx->dst_fmt.height) {
-		f->fmt.pix.pixelformat = V4L2_PIX_FMT_SUNXI_TILED_NV12;
-		cedrus_prepare_format(&f->fmt.pix);
-
-		return 0;
-	}
-
 	f->fmt.pix = ctx->dst_fmt;
-
 	return 0;
 }
 
@@ -232,17 +221,7 @@ static int cedrus_g_fmt_vid_out(struct file *file, void *priv,
 {
 	struct cedrus_ctx *ctx = cedrus_file2ctx(file);
 
-	/* Fall back to dummy default by lack of hardware configuration. */
-	if (!ctx->dst_fmt.width || !ctx->dst_fmt.height) {
-		f->fmt.pix.pixelformat = V4L2_PIX_FMT_MPEG2_SLICE;
-		f->fmt.pix.sizeimage = SZ_1K;
-		cedrus_prepare_format(&f->fmt.pix);
-
-		return 0;
-	}
-
 	f->fmt.pix = ctx->src_fmt;
-
 	return 0;
 }
 
@@ -252,11 +231,14 @@ static int cedrus_try_fmt_vid_cap(struct file *file, void *priv,
 	struct cedrus_ctx *ctx = cedrus_file2ctx(file);
 	struct cedrus_dev *dev = ctx->dev;
 	struct v4l2_pix_format *pix_fmt = &f->fmt.pix;
+	struct cedrus_format *fmt =
+		cedrus_find_format(pix_fmt->pixelformat, CEDRUS_DECODE_DST,
+				   dev->capabilities);
 
-	if (!cedrus_check_format(pix_fmt->pixelformat, CEDRUS_DECODE_DST,
-				 dev->capabilities))
+	if (!fmt)
 		return -EINVAL;
 
+	pix_fmt->pixelformat = fmt->pixelformat;
 	cedrus_prepare_format(pix_fmt);
 
 	return 0;
@@ -268,15 +250,14 @@ static int cedrus_try_fmt_vid_out(struct file *file, void *priv,
 	struct cedrus_ctx *ctx = cedrus_file2ctx(file);
 	struct cedrus_dev *dev = ctx->dev;
 	struct v4l2_pix_format *pix_fmt = &f->fmt.pix;
+	struct cedrus_format *fmt =
+		cedrus_find_format(pix_fmt->pixelformat, CEDRUS_DECODE_SRC,
+				   dev->capabilities);
 
-	if (!cedrus_check_format(pix_fmt->pixelformat, CEDRUS_DECODE_SRC,
-				 dev->capabilities))
+	if (!fmt)
 		return -EINVAL;
 
-	/* Source image size has to be provided by userspace. */
-	if (pix_fmt->sizeimage == 0)
-		return -EINVAL;
-
+	pix_fmt->pixelformat = fmt->pixelformat;
 	cedrus_prepare_format(pix_fmt);
 
 	return 0;
@@ -364,21 +345,12 @@ static int cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
 			      struct device *alloc_devs[])
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
-	struct cedrus_dev *dev = ctx->dev;
 	struct v4l2_pix_format *pix_fmt;
-	u32 directions;
 
-	if (V4L2_TYPE_IS_OUTPUT(vq->type)) {
-		directions = CEDRUS_DECODE_SRC;
+	if (V4L2_TYPE_IS_OUTPUT(vq->type))
 		pix_fmt = &ctx->src_fmt;
-	} else {
-		directions = CEDRUS_DECODE_DST;
+	else
 		pix_fmt = &ctx->dst_fmt;
-	}
-
-	if (!cedrus_check_format(pix_fmt->pixelformat, directions,
-				 dev->capabilities))
-		return -EINVAL;
 
 	if (*nplanes) {
 		if (sizes[0] < pix_fmt->sizeimage)
