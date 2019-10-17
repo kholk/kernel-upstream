@@ -18,6 +18,7 @@
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
 #include <loongson.h>
+#include <loongson_regs.h>
 #include <workarounds.h>
 
 #include "smp.h"
@@ -47,6 +48,62 @@ static uint32_t core0_c0count[NR_CPUS];
 		writeq(action, addr);		\
 		__wbflush();			\
 	} while (0)
+
+u32 (*ipi_read_clear)(int cpu);
+void (*ipi_write_action)(int cpu, u32 action);
+
+static u32 csr_ipi_read_clear(int cpu)
+{
+	u32 action;
+
+	/* Load the ipi register to figure out what we're supposed to do */
+	action = csr_readl(LOONGSON_CSR_IPI_STATUS);
+	/* Clear the ipi register to clear the interrupt */
+	csr_writel(action, LOONGSON_CSR_IPI_CLEAR);
+
+	return action;
+}
+
+static void csr_ipi_write_action(int cpu, u32 action)
+{
+	unsigned int irq = 0;
+
+	while ((irq = ffs(action))) {
+		uint32_t val = CSR_IPI_SEND_BLOCK;
+		val |= (irq - 1);
+		val |= (cpu << CSR_IPI_SEND_CPU_SHIFT);
+		csr_writel(val, LOONGSON_CSR_IPI_SEND);
+		action &= ~BIT(irq - 1);
+	}
+}
+
+static u32 legacy_ipi_read_clear(int cpu)
+{
+	u32 action;
+
+	/* Load the ipi register to figure out what we're supposed to do */
+	action = loongson3_ipi_read32(ipi_status0_regs[cpu_logical_map(cpu)]);
+	/* Clear the ipi register to clear the interrupt */
+	loongson3_ipi_write32(action, ipi_clear0_regs[cpu_logical_map(cpu)]);
+
+	return action;
+}
+
+static void legacy_ipi_write_action(int cpu, u32 action)
+{
+	loongson3_ipi_write32((u32)action, ipi_set0_regs[cpu]);
+}
+
+static void csr_ipi_probe(void)
+{
+	if (cpu_has_csr() && csr_readl(LOONGSON_CSR_FEATURES) & LOONGSON_CSRF_IPI) {
+		ipi_read_clear = csr_ipi_read_clear;
+		ipi_write_action = csr_ipi_write_action;
+	} else {
+		ipi_read_clear = legacy_ipi_read_clear;
+		ipi_write_action = legacy_ipi_write_action;
+	}
+}
 
 static void ipi_set0_regs_init(void)
 {
@@ -233,7 +290,7 @@ static void ipi_mailbox_buf_init(void)
  */
 static void loongson3_send_ipi_single(int cpu, unsigned int action)
 {
-	loongson3_ipi_write32((u32)action, ipi_set0_regs[cpu_logical_map(cpu)]);
+	ipi_write_action(cpu_logical_map(cpu), (u32)action);
 }
 
 static void
@@ -242,14 +299,14 @@ loongson3_send_ipi_mask(const struct cpumask *mask, unsigned int action)
 	unsigned int i;
 
 	for_each_cpu(i, mask)
-		loongson3_ipi_write32((u32)action, ipi_set0_regs[cpu_logical_map(i)]);
+		ipi_write_action(cpu_logical_map(i), (u32)action);
 }
 
 #define IPI_IRQ_OFFSET 6
 
 void loongson3_send_irq_by_ipi(int cpu, int irqs)
 {
-	loongson3_ipi_write32(irqs << IPI_IRQ_OFFSET, ipi_set0_regs[cpu_logical_map(cpu)]);
+	ipi_write_action(cpu_logical_map(cpu), irqs << IPI_IRQ_OFFSET);
 }
 
 void loongson3_ipi_interrupt(struct pt_regs *regs)
@@ -257,12 +314,8 @@ void loongson3_ipi_interrupt(struct pt_regs *regs)
 	int i, cpu = smp_processor_id();
 	unsigned int action, c0count, irqs;
 
-	/* Load the ipi register to figure out what we're supposed to do */
-	action = loongson3_ipi_read32(ipi_status0_regs[cpu_logical_map(cpu)]);
+	action = ipi_read_clear(cpu);
 	irqs = action >> IPI_IRQ_OFFSET;
-
-	/* Clear the ipi register to clear the interrupt */
-	loongson3_ipi_write32((u32)action, ipi_clear0_regs[cpu_logical_map(cpu)]);
 
 	if (action & SMP_RESCHEDULE_YOURSELF)
 		scheduler_ipi();
@@ -372,6 +425,7 @@ static void __init loongson3_smp_setup(void)
 		num++;
 	}
 
+	csr_ipi_probe();
 	ipi_set0_regs_init();
 	ipi_clear0_regs_init();
 	ipi_status0_regs_init();
@@ -450,7 +504,7 @@ static void loongson3_cpu_die(unsigned int cpu)
  * flush all L1 entries at first. Then, another core (usually Core 0) can
  * safely disable the clock of the target core. loongson3_play_dead() is
  * called via CKSEG1 (uncached and unmmaped) */
-static void loongson3a_r1_play_dead(int *state_addr)
+static void loongson3_type1_play_dead(int *state_addr)
 {
 	register int val;
 	register long cpuid, core, node, count;
@@ -512,7 +566,71 @@ static void loongson3a_r1_play_dead(int *state_addr)
 		: "a1");
 }
 
-static void loongson3a_r2r3_play_dead(int *state_addr)
+static void loongson3_type2_play_dead(int *state_addr)
+{
+	register int val;
+	register long cpuid, core, node, count;
+	register void *addr, *base, *initfunc;
+
+	__asm__ __volatile__(
+		"   .set push                     \n"
+		"   .set noreorder                \n"
+		"   li %[addr], 0x80000000        \n" /* KSEG0 */
+		"1: cache 0, 0(%[addr])           \n" /* flush L1 ICache */
+		"   cache 0, 1(%[addr])           \n"
+		"   cache 0, 2(%[addr])           \n"
+		"   cache 0, 3(%[addr])           \n"
+		"   cache 1, 0(%[addr])           \n" /* flush L1 DCache */
+		"   cache 1, 1(%[addr])           \n"
+		"   cache 1, 2(%[addr])           \n"
+		"   cache 1, 3(%[addr])           \n"
+		"   addiu %[sets], %[sets], -1    \n"
+		"   bnez  %[sets], 1b             \n"
+		"   addiu %[addr], %[addr], 0x20  \n"
+		"   li    %[val], 0x7             \n" /* *state_addr = CPU_DEAD; */
+		"   sw    %[val], (%[state_addr]) \n"
+		"   sync                          \n"
+		"   cache 21, (%[state_addr])     \n" /* flush entry of *state_addr */
+		"   .set pop                      \n"
+		: [addr] "=&r" (addr), [val] "=&r" (val)
+		: [state_addr] "r" (state_addr),
+		  [sets] "r" (cpu_data[smp_processor_id()].dcache.sets));
+
+	__asm__ __volatile__(
+		"   .set push                         \n"
+		"   .set noreorder                    \n"
+		"   .set mips64                       \n"
+		"   mfc0  %[cpuid], $15, 1            \n"
+		"   andi  %[cpuid], 0x3ff             \n"
+		"   dli   %[base], 0x900000003ff01000 \n"
+		"   andi  %[core], %[cpuid], 0x3      \n"
+		"   sll   %[core], 8                  \n" /* get core id */
+		"   or    %[base], %[base], %[core]   \n"
+		"   andi  %[node], %[cpuid], 0xc      \n"
+		"   dsll  %[node], 42                 \n" /* get node id */
+		"   or    %[base], %[base], %[node]   \n"
+		"   dsrl  %[node], 30                 \n" /* 15:14 */
+		"   or    %[base], %[base], %[node]   \n"
+		"1: li    %[count], 0x100             \n" /* wait for init loop */
+		"2: bnez  %[count], 2b                \n" /* limit mailbox access */
+		"   addiu %[count], -1                \n"
+		"   ld    %[initfunc], 0x20(%[base])  \n" /* get PC via mailbox */
+		"   beqz  %[initfunc], 1b             \n"
+		"   nop                               \n"
+		"   ld    $sp, 0x28(%[base])          \n" /* get SP via mailbox */
+		"   ld    $gp, 0x30(%[base])          \n" /* get GP via mailbox */
+		"   ld    $a1, 0x38(%[base])          \n"
+		"   jr    %[initfunc]                 \n" /* jump to initial PC */
+		"   nop                               \n"
+		"   .set pop                          \n"
+		: [core] "=&r" (core), [node] "=&r" (node),
+		  [base] "=&r" (base), [cpuid] "=&r" (cpuid),
+		  [count] "=&r" (count), [initfunc] "=&r" (initfunc)
+		: /* No Input */
+		: "a1");
+}
+
+static void loongson3_type3_play_dead(int *state_addr)
 {
 	register int val;
 	register long cpuid, core, node, count;
@@ -595,96 +713,44 @@ static void loongson3a_r2r3_play_dead(int *state_addr)
 		: "a1");
 }
 
-static void loongson3b_play_dead(int *state_addr)
-{
-	register int val;
-	register long cpuid, core, node, count;
-	register void *addr, *base, *initfunc;
-
-	__asm__ __volatile__(
-		"   .set push                     \n"
-		"   .set noreorder                \n"
-		"   li %[addr], 0x80000000        \n" /* KSEG0 */
-		"1: cache 0, 0(%[addr])           \n" /* flush L1 ICache */
-		"   cache 0, 1(%[addr])           \n"
-		"   cache 0, 2(%[addr])           \n"
-		"   cache 0, 3(%[addr])           \n"
-		"   cache 1, 0(%[addr])           \n" /* flush L1 DCache */
-		"   cache 1, 1(%[addr])           \n"
-		"   cache 1, 2(%[addr])           \n"
-		"   cache 1, 3(%[addr])           \n"
-		"   addiu %[sets], %[sets], -1    \n"
-		"   bnez  %[sets], 1b             \n"
-		"   addiu %[addr], %[addr], 0x20  \n"
-		"   li    %[val], 0x7             \n" /* *state_addr = CPU_DEAD; */
-		"   sw    %[val], (%[state_addr]) \n"
-		"   sync                          \n"
-		"   cache 21, (%[state_addr])     \n" /* flush entry of *state_addr */
-		"   .set pop                      \n"
-		: [addr] "=&r" (addr), [val] "=&r" (val)
-		: [state_addr] "r" (state_addr),
-		  [sets] "r" (cpu_data[smp_processor_id()].dcache.sets));
-
-	__asm__ __volatile__(
-		"   .set push                         \n"
-		"   .set noreorder                    \n"
-		"   .set mips64                       \n"
-		"   mfc0  %[cpuid], $15, 1            \n"
-		"   andi  %[cpuid], 0x3ff             \n"
-		"   dli   %[base], 0x900000003ff01000 \n"
-		"   andi  %[core], %[cpuid], 0x3      \n"
-		"   sll   %[core], 8                  \n" /* get core id */
-		"   or    %[base], %[base], %[core]   \n"
-		"   andi  %[node], %[cpuid], 0xc      \n"
-		"   dsll  %[node], 42                 \n" /* get node id */
-		"   or    %[base], %[base], %[node]   \n"
-		"   dsrl  %[node], 30                 \n" /* 15:14 */
-		"   or    %[base], %[base], %[node]   \n"
-		"1: li    %[count], 0x100             \n" /* wait for init loop */
-		"2: bnez  %[count], 2b                \n" /* limit mailbox access */
-		"   addiu %[count], -1                \n"
-		"   ld    %[initfunc], 0x20(%[base])  \n" /* get PC via mailbox */
-		"   beqz  %[initfunc], 1b             \n"
-		"   nop                               \n"
-		"   ld    $sp, 0x28(%[base])          \n" /* get SP via mailbox */
-		"   ld    $gp, 0x30(%[base])          \n" /* get GP via mailbox */
-		"   ld    $a1, 0x38(%[base])          \n"
-		"   jr    %[initfunc]                 \n" /* jump to initial PC */
-		"   nop                               \n"
-		"   .set pop                          \n"
-		: [core] "=&r" (core), [node] "=&r" (node),
-		  [base] "=&r" (base), [cpuid] "=&r" (cpuid),
-		  [count] "=&r" (count), [initfunc] "=&r" (initfunc)
-		: /* No Input */
-		: "a1");
-}
-
 void play_dead(void)
 {
-	int *state_addr;
+	int prid_imp, prid_rev, *state_addr;
 	unsigned int cpu = smp_processor_id();
 	void (*play_dead_at_ckseg1)(int *);
 
 	idle_task_exit();
-	switch (read_c0_prid() & PRID_REV_MASK) {
+
+	prid_imp = read_c0_prid() & PRID_IMP_MASK;
+	prid_rev = read_c0_prid() & PRID_REV_MASK;
+
+	if (prid_imp == PRID_IMP_LOONGSON_64G) {
+		play_dead_at_ckseg1 =
+			(void *)CKSEG1ADDR((unsigned long)loongson3_type3_play_dead);
+		goto out;
+	}
+
+	switch (prid_rev) {
 	case PRID_REV_LOONGSON3A_R1:
 	default:
 		play_dead_at_ckseg1 =
-			(void *)CKSEG1ADDR((unsigned long)loongson3a_r1_play_dead);
+			(void *)CKSEG1ADDR((unsigned long)loongson3_type1_play_dead);
+		break;
+	case PRID_REV_LOONGSON3B_R1:
+	case PRID_REV_LOONGSON3B_R2:
+		play_dead_at_ckseg1 =
+			(void *)CKSEG1ADDR((unsigned long)loongson3_type2_play_dead);
 		break;
 	case PRID_REV_LOONGSON3A_R2_0:
 	case PRID_REV_LOONGSON3A_R2_1:
 	case PRID_REV_LOONGSON3A_R3_0:
 	case PRID_REV_LOONGSON3A_R3_1:
 		play_dead_at_ckseg1 =
-			(void *)CKSEG1ADDR((unsigned long)loongson3a_r2r3_play_dead);
-		break;
-	case PRID_REV_LOONGSON3B_R1:
-	case PRID_REV_LOONGSON3B_R2:
-		play_dead_at_ckseg1 =
-			(void *)CKSEG1ADDR((unsigned long)loongson3b_play_dead);
+			(void *)CKSEG1ADDR((unsigned long)loongson3_type3_play_dead);
 		break;
 	}
+
+out:
 	state_addr = &per_cpu(cpu_state, cpu);
 	mb();
 	play_dead_at_ckseg1(state_addr);
