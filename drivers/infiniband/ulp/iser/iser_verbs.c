@@ -180,7 +180,7 @@ int iser_alloc_fmr_pool(struct ib_conn *ib_conn,
 
 	page_vec->pages = (u64 *)(page_vec + 1);
 
-	params.page_shift        = SHIFT_4K;
+	params.page_shift        = ilog2(SZ_4K);
 	params.max_pages_per_fmr = size;
 	/* make the pool size twice the max number of SCSI commands *
 	 * the ML is expected to queue, watermark for unmap at 50%  */
@@ -670,7 +670,7 @@ iser_calc_scsi_params(struct iser_conn *iser_conn,
 	else
 		max_num_sg = attr->max_fast_reg_page_list_len;
 
-	sg_tablesize = DIV_ROUND_UP(max_sectors * 512, SIZE_4K);
+	sg_tablesize = DIV_ROUND_UP(max_sectors * SECTOR_SIZE, SZ_4K);
 	if (attr->device_cap_flags & IB_DEVICE_MEM_MGT_EXTENSIONS)
 		sup_sg_tablesize =
 			min_t(
@@ -1019,7 +1019,7 @@ int iser_post_recvm(struct iser_conn *iser_conn, int count)
 
 	ib_conn->post_recv_buf_count += count;
 	ib_ret = ib_post_recv(ib_conn->qp, ib_conn->rx_wr, NULL);
-	if (ib_ret) {
+	if (unlikely(ib_ret)) {
 		iser_err("ib_post_recv failed ret=%d\n", ib_ret);
 		ib_conn->post_recv_buf_count -= count;
 	} else
@@ -1060,7 +1060,7 @@ int iser_post_send(struct ib_conn *ib_conn, struct iser_tx_desc *tx_desc,
 		first_wr = wr;
 
 	ib_ret = ib_post_send(ib_conn->qp, first_wr, NULL);
-	if (ib_ret)
+	if (unlikely(ib_ret))
 		iser_err("ib_post_send failed, ret:%d opcode:%d\n",
 			 ib_ret, wr->opcode);
 
@@ -1081,7 +1081,7 @@ u8 iser_check_task_pi_status(struct iscsi_iser_task *iser_task,
 		ret = ib_check_mr_status(desc->rsc.sig_mr,
 					 IB_MR_CHECK_SIG_STATUS, &mr_status);
 		if (ret) {
-			pr_err("ib_check_mr_status failed, ret %d\n", ret);
+			iser_err("ib_check_mr_status failed, ret %d\n", ret);
 			/* Not a lot we can do, return ambiguous guard error */
 			*sector = 0;
 			return 0x1;
@@ -1093,7 +1093,7 @@ u8 iser_check_task_pi_status(struct iscsi_iser_task *iser_task,
 			sector_div(sector_off, sector_size + 8);
 			*sector = scsi_get_lba(iser_task->sc) + sector_off;
 
-			pr_err("PI error found type %d at sector %llx "
+			iser_err("PI error found type %d at sector %llx "
 			       "expected %x vs actual %x\n",
 			       mr_status.sig_err.err_type,
 			       (unsigned long long)*sector,
