@@ -10,8 +10,8 @@
 	model = "NVIDIA Jetson AGX Xavier Developer Kit";
 	compatible = "nvidia,p2972-0000", "nvidia,tegra194";
 
-	cbb {
-		aconnect {
+	cbb@0 {
+		aconnect@2900000 {
 			status = "okay";
 
 			dma-controller@2930000 {
