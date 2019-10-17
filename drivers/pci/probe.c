@@ -7,6 +7,7 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/pci.h>
+#include <linux/msi.h>
 #include <linux/of_device.h>
 #include <linux/of_pci.h>
 #include <linux/pci_hotplug.h>
@@ -572,6 +573,7 @@ static void devm_pci_release_host_bridge_dev(struct device *dev)
 		bridge->release_fn(bridge);
 
 	pci_free_resource_list(&bridge->windows);
+	pci_free_resource_list(&bridge->dma_ranges);
 }
 
 static void pci_release_host_bridge_dev(struct device *dev)
@@ -2323,6 +2325,12 @@ static void pci_init_capabilities(struct pci_dev *dev)
 
 	/* Address Translation Services */
 	pci_ats_init(dev);
+
+	/* Page Request Interface */
+	pci_pri_init(dev);
+
+	/* Process Address Space ID */
+	pci_pasid_init(dev);
 
 	/* Enable ACS P2P upstream forwarding */
 	pci_enable_acs(dev);
