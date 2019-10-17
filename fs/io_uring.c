@@ -267,10 +267,11 @@ struct io_ring_ctx {
 struct sqe_submit {
 	const struct io_uring_sqe	*sqe;
 	unsigned short			index;
+	bool				has_user : 1;
+	bool				in_async : 1;
+	bool				needs_fixed_file : 1;
 	u32				sequence;
-	bool				has_user;
-	bool				in_async;
-	bool				needs_fixed_file;
+	struct files_struct		*files;
 };
 
 /*
@@ -325,6 +326,7 @@ struct io_kiocb {
 #define REQ_F_TIMEOUT		1024	/* timeout request */
 #define REQ_F_ISREG		2048	/* regular file */
 #define REQ_F_MUST_PUNT		4096	/* must be punted even for NONBLOCK */
+#define REQ_F_NEED_FILES	8192	/* needs to assume file table */
 	u64			user_data;
 	u32			result;
 	u32			sequence;
@@ -2221,6 +2223,7 @@ static inline bool io_sqe_needs_user(const struct io_uring_sqe *sqe)
 static void io_sq_wq_submit_work(struct work_struct *work)
 {
 	struct io_kiocb *req = container_of(work, struct io_kiocb, work);
+	struct files_struct *old_files = NULL;
 	struct io_ring_ctx *ctx = req->ctx;
 	struct mm_struct *cur_mm = NULL;
 	struct async_list *async_list;
@@ -2249,6 +2252,10 @@ restart:
 				old_fs = get_fs();
 				set_fs(USER_DS);
 			}
+		}
+		if (s->files && !old_files) {
+			old_files = current->files;
+			current->files = s->files;
 		}
 
 		if (!ret) {
@@ -2341,6 +2348,11 @@ out:
 		set_fs(old_fs);
 		unuse_mm(cur_mm);
 		mmput(cur_mm);
+	}
+	if (old_files) {
+		struct files_struct *files = current->files;
+		current->files = old_files;
+		put_files_struct(files);
 	}
 }
 
@@ -2449,6 +2461,8 @@ static int __io_queue_sqe(struct io_ring_ctx *ctx, struct io_kiocb *req,
 
 			s->sqe = sqe_copy;
 			memcpy(&req->submit, s, sizeof(*s));
+			if (req->flags & REQ_F_NEED_FILES)
+				req->submit.files = get_files_struct(current);
 			list = io_async_list_from_sqe(ctx, s->sqe);
 			if (!io_add_to_prev_work(list, req)) {
 				if (list)
@@ -2669,6 +2683,7 @@ static bool io_get_sqring(struct io_ring_ctx *ctx, struct sqe_submit *s)
 		s->index = head;
 		s->sqe = &ctx->sq_sqes[head];
 		s->sequence = ctx->cached_sq_head;
+		s->files = NULL;
 		ctx->cached_sq_head++;
 		return true;
 	}
