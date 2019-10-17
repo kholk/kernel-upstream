@@ -34,6 +34,8 @@ static const struct btrfs_csums {
 	const char	*name;
 } btrfs_csums[] = {
 	[BTRFS_CSUM_TYPE_CRC32] = { .size = 4, .name = "crc32c" },
+	[BTRFS_CSUM_TYPE_XXHASH] = { .size = 8, .name = "xxhash64" },
+	[BTRFS_CSUM_TYPE_SHA256] = { .size = 32, .name = "sha256" },
 };
 
 int btrfs_super_csum_size(const struct btrfs_super_block *s)
@@ -49,6 +51,11 @@ const char *btrfs_super_csum_name(u16 csum_type)
 {
 	/* csum type is validated at mount time */
 	return btrfs_csums[csum_type].name;
+}
+
+size_t __const btrfs_get_num_csums(void)
+{
+	return ARRAY_SIZE(btrfs_csums);
 }
 
 struct btrfs_path *btrfs_alloc_path(void)

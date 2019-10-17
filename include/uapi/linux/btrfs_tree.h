@@ -302,6 +302,8 @@
 /* csum types */
 enum btrfs_csum_type {
 	BTRFS_CSUM_TYPE_CRC32	= 0,
+	BTRFS_CSUM_TYPE_XXHASH	= 1,
+	BTRFS_CSUM_TYPE_SHA256	= 2,
 };
 
 /*
