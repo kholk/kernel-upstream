@@ -39,6 +39,7 @@ struct clk;
  */
 struct atmel_tcb_config {
 	size_t	counter_width;
+	unsigned int has_gclk:1;
 };
 
 /**
