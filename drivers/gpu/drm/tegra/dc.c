@@ -717,7 +717,7 @@ static void tegra_plane_atomic_update(struct drm_plane *plane,
 	for (i = 0; i < fb->format->num_planes; i++) {
 		struct tegra_bo *bo = tegra_fb_get_plane(fb, i);
 
-		window.base[i] = bo->paddr + fb->offsets[i];
+		window.base[i] = bo->iova + fb->offsets[i];
 
 		/*
 		 * Tegra uses a shared stride for UV planes. Framebuffers are
@@ -869,11 +869,11 @@ static void tegra_cursor_atomic_update(struct drm_plane *plane,
 		return;
 	}
 
-	value |= (bo->paddr >> 10) & 0x3fffff;
+	value |= (bo->iova >> 10) & 0x3fffff;
 	tegra_dc_writel(dc, value, DC_DISP_CURSOR_START_ADDR);
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	value = (bo->paddr >> 32) & 0x3;
+	value = (bo->iova >> 32) & 0x3;
 	tegra_dc_writel(dc, value, DC_DISP_CURSOR_START_ADDR_HI);
 #endif
 
@@ -2014,9 +2014,8 @@ static int tegra_dc_init(struct host1x_client *client)
 	if (!dc->syncpt)
 		dev_warn(dc->dev, "failed to allocate syncpoint\n");
 
-	dc->group = host1x_client_iommu_attach(client, true);
-	if (IS_ERR(dc->group)) {
-		err = PTR_ERR(dc->group);
+	err = host1x_client_iommu_attach(client, true);
+	if (err < 0) {
 		dev_err(client->dev, "failed to attach to domain: %d\n", err);
 		return err;
 	}
@@ -2074,6 +2073,12 @@ static int tegra_dc_init(struct host1x_client *client)
 		goto cleanup;
 	}
 
+	/*
+	 * Inherit the DMA parameters (such as maximum segment size) from the
+	 * parent device.
+	 */
+	client->dev->dma_parms = client->parent->dma_parms;
+
 	return 0;
 
 cleanup:
@@ -2083,7 +2088,7 @@ cleanup:
 	if (!IS_ERR(primary))
 		drm_plane_cleanup(primary);
 
-	host1x_client_iommu_detach(client, dc->group);
+	host1x_client_iommu_detach(client);
 	host1x_syncpt_free(dc->syncpt);
 
 	return err;
@@ -2097,6 +2102,9 @@ static int tegra_dc_exit(struct host1x_client *client)
 	if (!tegra_dc_has_window_groups(dc))
 		return 0;
 
+	/* avoid a dangling pointer just in case this disappears */
+	client->dev->dma_parms = NULL;
+
 	devm_free_irq(dc->dev, dc->irq, dc);
 
 	err = tegra_dc_rgb_exit(dc);
@@ -2105,7 +2113,7 @@ static int tegra_dc_exit(struct host1x_client *client)
 		return err;
 	}
 
-	host1x_client_iommu_detach(client, dc->group);
+	host1x_client_iommu_detach(client);
 	host1x_syncpt_free(dc->syncpt);
 
 	return 0;

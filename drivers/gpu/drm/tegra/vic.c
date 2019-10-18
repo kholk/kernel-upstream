@@ -34,7 +34,6 @@ struct vic {
 	void __iomem *regs;
 	struct tegra_drm_client client;
 	struct host1x_channel *channel;
-	struct iommu_domain *domain;
 	struct device *dev;
 	struct clk *clk;
 	struct reset_control *rst;
@@ -97,6 +96,9 @@ static int vic_runtime_suspend(struct device *dev)
 
 static int vic_boot(struct vic *vic)
 {
+#ifdef CONFIG_IOMMU_API
+	struct iommu_fwspec *spec = dev_iommu_fwspec_get(vic->dev);
+#endif
 	u32 fce_ucode_size, fce_bin_data_offset;
 	void *hdr;
 	int err = 0;
@@ -105,15 +107,14 @@ static int vic_boot(struct vic *vic)
 		return 0;
 
 #ifdef CONFIG_IOMMU_API
-	if (vic->config->supports_sid) {
-		struct iommu_fwspec *spec = dev_iommu_fwspec_get(vic->dev);
+	if (vic->config->supports_sid && spec) {
 		u32 value;
 
 		value = TRANSCFG_ATT(1, TRANSCFG_SID_FALCON) |
 			TRANSCFG_ATT(0, TRANSCFG_SID_HW);
 		vic_writel(vic, value, VIC_TFBIF_TRANSCFG);
 
-		if (spec && spec->num_ids > 0) {
+		if (spec->num_ids > 0) {
 			value = spec->ids[0] & 0xffff;
 
 			vic_writel(vic, value, VIC_THI_STREAMID0);
@@ -181,24 +182,18 @@ static const struct falcon_ops vic_falcon_ops = {
 static int vic_init(struct host1x_client *client)
 {
 	struct tegra_drm_client *drm = host1x_to_drm_client(client);
-	struct iommu_group *group = iommu_group_get(client->dev);
 	struct drm_device *dev = dev_get_drvdata(client->parent);
 	struct tegra_drm *tegra = dev->dev_private;
 	struct vic *vic = to_vic(drm);
 	int err;
 
-	if (group && tegra->domain) {
-		err = iommu_attach_group(tegra->domain, group);
-		if (err < 0) {
-			dev_err(vic->dev, "failed to attach to domain: %d\n",
-				err);
-			return err;
-		}
-
-		vic->domain = tegra->domain;
+	err = host1x_client_iommu_attach(client, false);
+	if (err < 0) {
+		dev_err(vic->dev, "failed to attach to domain: %d\n", err);
+		return err;
 	}
 
-	vic->channel = host1x_channel_request(client->dev);
+	vic->channel = host1x_channel_request(client);
 	if (!vic->channel) {
 		err = -ENOMEM;
 		goto detach;
@@ -214,6 +209,12 @@ static int vic_init(struct host1x_client *client)
 	if (err < 0)
 		goto free_syncpt;
 
+	/*
+	 * Inherit the DMA parameters (such as maximum segment size) from the
+	 * parent device.
+	 */
+	client->dev->dma_parms = client->parent->dma_parms;
+
 	return 0;
 
 free_syncpt:
@@ -221,8 +222,7 @@ free_syncpt:
 free_channel:
 	host1x_channel_put(vic->channel);
 detach:
-	if (group && tegra->domain)
-		iommu_detach_group(tegra->domain, group);
+	host1x_client_iommu_detach(client);
 
 	return err;
 }
@@ -230,11 +230,13 @@ detach:
 static int vic_exit(struct host1x_client *client)
 {
 	struct tegra_drm_client *drm = host1x_to_drm_client(client);
-	struct iommu_group *group = iommu_group_get(client->dev);
 	struct drm_device *dev = dev_get_drvdata(client->parent);
 	struct tegra_drm *tegra = dev->dev_private;
 	struct vic *vic = to_vic(drm);
 	int err;
+
+	/* avoid a dangling pointer just in case this disappears */
+	client->dev->dma_parms = NULL;
 
 	err = tegra_drm_unregister_client(tegra, drm);
 	if (err < 0)
@@ -242,11 +244,7 @@ static int vic_exit(struct host1x_client *client)
 
 	host1x_syncpt_free(client->syncpts[0]);
 	host1x_channel_put(vic->channel);
-
-	if (vic->domain) {
-		iommu_detach_group(vic->domain, group);
-		vic->domain = NULL;
-	}
+	host1x_client_iommu_detach(client);
 
 	return 0;
 }
@@ -373,6 +371,13 @@ static int vic_probe(struct platform_device *pdev)
 	struct resource *regs;
 	struct vic *vic;
 	int err;
+
+	/* inherit DMA mask from host1x parent */
+	err = dma_coerce_mask_and_coherent(dev, *dev->parent->dma_mask);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to set DMA mask: %d\n", err);
+		return err;
+	}
 
 	vic = devm_kzalloc(dev, sizeof(*vic), GFP_KERNEL);
 	if (!vic)

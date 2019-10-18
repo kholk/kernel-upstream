@@ -18,6 +18,7 @@ enum host1x_class {
 };
 
 struct host1x_client;
+struct iommu_group;
 
 /**
  * struct host1x_client_ops - host1x client operations
@@ -34,6 +35,7 @@ struct host1x_client_ops {
  * @list: list node for the host1x client
  * @parent: pointer to struct device representing the host1x controller
  * @dev: pointer to struct device backing this host1x client
+ * @group: IOMMU group that this client is a member of
  * @ops: host1x client operations
  * @class: host1x class represented by this client
  * @channel: host1x channel associated with this client
@@ -44,6 +46,7 @@ struct host1x_client {
 	struct list_head list;
 	struct device *parent;
 	struct device *dev;
+	struct iommu_group *group;
 
 	const struct host1x_client_ops *ops;
 
@@ -158,7 +161,7 @@ u32 host1x_syncpt_base_id(struct host1x_syncpt_base *base);
 struct host1x_channel;
 struct host1x_job;
 
-struct host1x_channel *host1x_channel_request(struct device *dev);
+struct host1x_channel *host1x_channel_request(struct host1x_client *client);
 struct host1x_channel *host1x_channel_get(struct host1x_channel *channel);
 void host1x_channel_put(struct host1x_channel *channel);
 int host1x_job_submit(struct host1x_job *job);
