@@ -675,7 +675,6 @@ static void set_qos(struct pkt_file *ppktfile, struct pkt_attrib *pattrib)
 
 static s32 update_attrib(struct adapter *padapter, _pkt *pkt, struct pkt_attrib *pattrib)
 {
-	uint i;
 	struct pkt_file pktfile;
 	struct sta_info *psta = NULL;
 	struct ethhdr etherhdr;
@@ -689,7 +688,7 @@ static s32 update_attrib(struct adapter *padapter, _pkt *pkt, struct pkt_attrib 
 	DBG_COUNTER(padapter->tx_logs.core_tx_upd_attrib);
 
 	_rtw_open_pktfile(pkt, &pktfile);
-	i = _rtw_pktfile_read(&pktfile, (u8 *)&etherhdr, ETH_HLEN);
+	_rtw_pktfile_read(&pktfile, (u8 *)&etherhdr, ETH_HLEN);
 
 	pattrib->ether_type = ntohs(etherhdr.h_proto);
 
@@ -2207,12 +2206,9 @@ s32 rtw_alloc_hwxmits(struct adapter *padapter)
 
 void rtw_free_hwxmits(struct adapter *padapter)
 {
-	struct hw_xmit *hwxmits;
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 
-	hwxmits = pxmitpriv->hwxmits;
-	if (hwxmits)
-		kfree((u8 *)hwxmits);
+	kfree(pxmitpriv->hwxmits);
 }
 
 void rtw_init_hwxmits(struct hw_xmit *phwxmit, sint entry)
@@ -2310,7 +2306,7 @@ s32 rtw_xmit(struct adapter *padapter, _pkt **ppkt)
 
 	if (!pxmitframe) {
 		drop_cnt++;
-		RT_TRACE(_module_xmit_osdep_c_, _drv_err_, ("rtw_xmit: no more pxmitframe\n"));
+		RT_TRACE(_module_xmit_osdep_c_, _drv_err_, ("%s: no more pxmitframe\n", __func__));
 		DBG_COUNTER(padapter->tx_logs.core_tx_err_pxmitframe);
 		return -1;
 	}
@@ -2318,7 +2314,7 @@ s32 rtw_xmit(struct adapter *padapter, _pkt **ppkt)
 	res = update_attrib(padapter, *ppkt, &pxmitframe->attrib);
 
 	if (res == _FAIL) {
-		RT_TRACE(_module_xmit_osdep_c_, _drv_err_, ("rtw_xmit: update attrib fail\n"));
+		RT_TRACE(_module_xmit_osdep_c_, _drv_err_, ("%s: update attrib fail\n", __func__));
 		#ifdef DBG_TX_DROP_FRAME
 		DBG_871X("DBG_TX_DROP_FRAME %s update attrib fail\n", __func__);
 		#endif
@@ -2690,14 +2686,6 @@ void wakeup_sta_to_xmit(struct adapter *padapter, struct sta_info *psta)
 
 		pxmitframe->attrib.triggered = 1;
 
-/*
-		spin_unlock_bh(&psta->sleep_q.lock);
-		if (rtw_hal_xmit(padapter, pxmitframe) == true)
-		{
-			rtw_os_xmit_complete(padapter, pxmitframe);
-		}
-		spin_lock_bh(&psta->sleep_q.lock);
-*/
 		rtw_hal_xmitframe_enqueue(padapter, pxmitframe);
 
 
@@ -2992,7 +2980,7 @@ int rtw_xmit_thread(void *context)
 	do {
 		err = rtw_hal_xmit_thread_handler(padapter);
 		flush_signals_thread();
-	} while (_SUCCESS == err);
+	} while (err == _SUCCESS);
 
 	complete(&padapter->xmitpriv.terminate_xmitthread_comp);
 
@@ -3022,9 +3010,8 @@ int rtw_sctx_wait(struct submit_ctx *sctx, const char *msg)
 		status = sctx->status;
 	}
 
-	if (status == RTW_SCTX_DONE_SUCCESS) {
+	if (status == RTW_SCTX_DONE_SUCCESS)
 		ret = _SUCCESS;
-	}
 
 	return ret;
 }
@@ -3075,9 +3062,8 @@ void rtw_ack_tx_done(struct xmit_priv *pxmitpriv, int status)
 {
 	struct submit_ctx *pack_tx_ops = &pxmitpriv->ack_tx_ops;
 
-	if (pxmitpriv->ack_tx) {
+	if (pxmitpriv->ack_tx)
 		rtw_sctx_done_err(&pack_tx_ops, status);
-	} else {
+	else
 		DBG_871X("%s ack_tx not set\n", __func__);
-	}
 }
