@@ -112,8 +112,7 @@ static struct smu_11_0_cmn2aisc_mapping arcturus_message_map[SMU_MSG_MAX_COUNT] 
 	MSG_MAP(PrepareMp1ForShutdown,		     PPSMC_MSG_PrepareMp1ForShutdown),
 	MSG_MAP(SoftReset,			     PPSMC_MSG_SoftReset),
 	MSG_MAP(RunAfllBtc,			     PPSMC_MSG_RunAfllBtc),
-	MSG_MAP(RunGfxDcBtc,			     PPSMC_MSG_RunGfxDcBtc),
-	MSG_MAP(RunSocDcBtc,			     PPSMC_MSG_RunSocDcBtc),
+	MSG_MAP(RunDcBtc,			     PPSMC_MSG_RunDcBtc),
 	MSG_MAP(DramLogSetDramAddrHigh,		     PPSMC_MSG_DramLogSetDramAddrHigh),
 	MSG_MAP(DramLogSetDramAddrLow,		     PPSMC_MSG_DramLogSetDramAddrLow),
 	MSG_MAP(DramLogSetDramSize,		     PPSMC_MSG_DramLogSetDramSize),
@@ -528,9 +527,17 @@ static int arcturus_append_powerplay_table(struct smu_context *smu)
 	return 0;
 }
 
-static int arcturus_run_btc_afll(struct smu_context *smu)
+static int arcturus_run_btc(struct smu_context *smu)
 {
-	return smu_send_smc_msg(smu, SMU_MSG_RunAfllBtc);
+	int ret = 0;
+
+	ret = smu_send_smc_msg(smu, SMU_MSG_RunAfllBtc);
+	if (ret) {
+		pr_err("RunAfllBtc failed!\n");
+		return ret;
+	}
+
+	return smu_send_smc_msg(smu, SMU_MSG_RunDcBtc);
 }
 
 static int arcturus_populate_umd_state_clk(struct smu_context *smu)
@@ -1891,6 +1898,35 @@ static bool arcturus_is_dpm_running(struct smu_context *smu)
 	return !!(feature_enabled & SMC_DPM_FEATURE);
 }
 
+static int arcturus_dpm_set_uvd_enable(struct smu_context *smu, bool enable)
+{
+	struct smu_power_context *smu_power = &smu->smu_power;
+	struct smu_power_gate *power_gate = &smu_power->power_gate;
+	int ret = 0;
+
+	if (enable) {
+		if (!smu_feature_is_enabled(smu, SMU_FEATURE_VCN_PG_BIT)) {
+			ret = smu_feature_set_enabled(smu, SMU_FEATURE_VCN_PG_BIT, 1);
+			if (ret) {
+				pr_err("[EnableVCNDPM] failed!\n");
+				return ret;
+			}
+		}
+		power_gate->vcn_gated = false;
+	} else {
+		if (smu_feature_is_enabled(smu, SMU_FEATURE_VCN_PG_BIT)) {
+			ret = smu_feature_set_enabled(smu, SMU_FEATURE_VCN_PG_BIT, 0);
+			if (ret) {
+				pr_err("[DisableVCNDPM] failed!\n");
+				return ret;
+			}
+		}
+		power_gate->vcn_gated = true;
+	}
+
+	return ret;
+}
+
 static const struct pptable_funcs arcturus_ppt_funcs = {
 	/* translate smu index into arcturus specific index */
 	.get_smu_msg_index = arcturus_get_smu_msg_index,
@@ -1909,7 +1945,7 @@ static const struct pptable_funcs arcturus_ppt_funcs = {
 	/* init dpm */
 	.get_allowed_feature_mask = arcturus_get_allowed_feature_mask,
 	/* btc */
-	.run_afll_btc = arcturus_run_btc_afll,
+	.run_btc = arcturus_run_btc,
 	/* dpm/clk tables */
 	.set_default_dpm_table = arcturus_set_default_dpm_table,
 	.populate_umd_state_clk = arcturus_populate_umd_state_clk,
@@ -1929,12 +1965,10 @@ static const struct pptable_funcs arcturus_ppt_funcs = {
 	.dump_pptable = arcturus_dump_pptable,
 	.get_power_limit = arcturus_get_power_limit,
 	.is_dpm_running = arcturus_is_dpm_running,
+	.dpm_set_uvd_enable = arcturus_dpm_set_uvd_enable,
 };
 
 void arcturus_set_ppt_funcs(struct smu_context *smu)
 {
-	struct smu_table_context *smu_table = &smu->smu_table;
-
 	smu->ppt_funcs = &arcturus_ppt_funcs;
-	smu_table->table_count = TABLE_COUNT;
 }

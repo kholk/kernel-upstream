@@ -35,6 +35,7 @@
 #include "amdgpu_trace.h"
 #include "amdgpu_gmc.h"
 #include "amdgpu_gem.h"
+#include "amdgpu_ras.h"
 
 static int amdgpu_cs_user_fence_chunk(struct amdgpu_cs_parser *p,
 				      struct drm_amdgpu_cs_chunk_fence *data,
@@ -229,6 +230,8 @@ static int amdgpu_cs_parser_init(struct amdgpu_cs_parser *p, union drm_amdgpu_cs
 	ret = amdgpu_job_alloc(p->adev, num_ibs, &p->job, vm);
 	if (ret)
 		goto free_all_kdata;
+
+	p->job->secure = cs->in.flags & AMDGPU_CS_FLAGS_SECURE;
 
 	if (p->ctx->vram_lost_counter != p->job->vram_lost_counter) {
 		ret = -ECANCELED;
@@ -449,75 +452,12 @@ retry:
 	return r;
 }
 
-/* Last resort, try to evict something from the current working set */
-static bool amdgpu_cs_try_evict(struct amdgpu_cs_parser *p,
-				struct amdgpu_bo *validated)
-{
-	uint32_t domain = validated->allowed_domains;
-	struct ttm_operation_ctx ctx = { true, false };
-	int r;
-
-	if (!p->evictable)
-		return false;
-
-	for (;&p->evictable->tv.head != &p->validated;
-	     p->evictable = list_prev_entry(p->evictable, tv.head)) {
-
-		struct amdgpu_bo_list_entry *candidate = p->evictable;
-		struct amdgpu_bo *bo = ttm_to_amdgpu_bo(candidate->tv.bo);
-		struct amdgpu_device *adev = amdgpu_ttm_adev(bo->tbo.bdev);
-		bool update_bytes_moved_vis;
-		uint32_t other;
-
-		/* If we reached our current BO we can forget it */
-		if (bo == validated)
-			break;
-
-		/* We can't move pinned BOs here */
-		if (bo->pin_count)
-			continue;
-
-		other = amdgpu_mem_type_to_domain(bo->tbo.mem.mem_type);
-
-		/* Check if this BO is in one of the domains we need space for */
-		if (!(other & domain))
-			continue;
-
-		/* Check if we can move this BO somewhere else */
-		other = bo->allowed_domains & ~domain;
-		if (!other)
-			continue;
-
-		/* Good we can try to move this BO somewhere else */
-		update_bytes_moved_vis =
-				!amdgpu_gmc_vram_full_visible(&adev->gmc) &&
-				amdgpu_bo_in_cpu_visible_vram(bo);
-		amdgpu_bo_placement_from_domain(bo, other);
-		r = ttm_bo_validate(&bo->tbo, &bo->placement, &ctx);
-		p->bytes_moved += ctx.bytes_moved;
-		if (update_bytes_moved_vis)
-			p->bytes_moved_vis += ctx.bytes_moved;
-
-		if (unlikely(r))
-			break;
-
-		p->evictable = list_prev_entry(p->evictable, tv.head);
-		list_move(&candidate->tv.head, &p->validated);
-
-		return true;
-	}
-
-	return false;
-}
-
 static int amdgpu_cs_validate(void *param, struct amdgpu_bo *bo)
 {
 	struct amdgpu_cs_parser *p = param;
 	int r;
 
-	do {
-		r = amdgpu_cs_bo_validate(p, bo);
-	} while (r == -ENOMEM && amdgpu_cs_try_evict(p, bo));
+	r = amdgpu_cs_bo_validate(p, bo);
 	if (r)
 		return r;
 
@@ -536,7 +476,6 @@ static int amdgpu_cs_list_validate(struct amdgpu_cs_parser *p,
 
 	list_for_each_entry(lobj, validated, tv.head) {
 		struct amdgpu_bo *bo = ttm_to_amdgpu_bo(lobj->tv.bo);
-		bool binding_userptr = false;
 		struct mm_struct *usermm;
 
 		usermm = amdgpu_ttm_tt_get_usermm(bo->tbo.ttm);
@@ -553,20 +492,14 @@ static int amdgpu_cs_list_validate(struct amdgpu_cs_parser *p,
 
 			amdgpu_ttm_tt_set_user_pages(bo->tbo.ttm,
 						     lobj->user_pages);
-			binding_userptr = true;
 		}
-
-		if (p->evictable == lobj)
-			p->evictable = NULL;
 
 		r = amdgpu_cs_validate(p, bo);
 		if (r)
 			return r;
 
-		if (binding_userptr) {
-			kvfree(lobj->user_pages);
-			lobj->user_pages = NULL;
-		}
+		kvfree(lobj->user_pages);
+		lobj->user_pages = NULL;
 	}
 	return 0;
 }
@@ -661,9 +594,6 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
 					  &p->bytes_moved_vis_threshold);
 	p->bytes_moved = 0;
 	p->bytes_moved_vis = 0;
-	p->evictable = list_last_entry(&p->validated,
-				       struct amdgpu_bo_list_entry,
-				       tv.head);
 
 	r = amdgpu_vm_validate_pt_bos(p->adev, &fpriv->vm,
 				      amdgpu_cs_validate, p);
@@ -915,7 +845,7 @@ static int amdgpu_cs_vm_handling(struct amdgpu_cs_parser *p)
 	if (r)
 		return r;
 
-	r = amdgpu_vm_update_directories(adev, vm);
+	r = amdgpu_vm_update_pdes(adev, vm, false);
 	if (r)
 		return r;
 
@@ -1358,6 +1288,9 @@ int amdgpu_cs_ioctl(struct drm_device *dev, void *data, struct drm_file *filp)
 	struct amdgpu_cs_parser parser = {};
 	bool reserved_buffers = false;
 	int i, r;
+
+	if (amdgpu_ras_intr_triggered())
+		return -EHWPOISON;
 
 	if (!adev->accel_working)
 		return -EBUSY;

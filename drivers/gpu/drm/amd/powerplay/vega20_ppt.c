@@ -143,6 +143,7 @@ static struct smu_11_0_cmn2aisc_mapping vega20_message_map[SMU_MSG_MAX_COUNT] = 
 	MSG_MAP(PrepareMp1ForShutdown),
 	MSG_MAP(SetMGpuFanBoostLimitRpm),
 	MSG_MAP(GetAVFSVoltageByDpm),
+	MSG_MAP(DFCstateControl),
 };
 
 static struct smu_11_0_cmn2aisc_mapping vega20_clk_map[SMU_CLK_COUNT] = {
@@ -1274,13 +1275,7 @@ static int vega20_force_clk_levels(struct smu_context *smu,
 	struct vega20_dpm_table *dpm_table;
 	struct vega20_single_dpm_table *single_dpm_table;
 	uint32_t soft_min_level, soft_max_level, hard_min_level;
-	struct smu_dpm_context *smu_dpm = &smu->smu_dpm;
 	int ret = 0;
-
-	if (smu_dpm->dpm_level != AMD_DPM_FORCED_LEVEL_MANUAL) {
-		pr_info("force clock level is for dpm manual mode only.\n");
-		return -EINVAL;
-	}
 
 	mutex_lock(&(smu->mutex));
 
@@ -3141,6 +3136,49 @@ static int vega20_get_thermal_temperature_range(struct smu_context *smu,
 	return 0;
 }
 
+static int vega20_set_df_cstate(struct smu_context *smu,
+				enum pp_df_cstate state)
+{
+	uint32_t smu_version;
+	int ret;
+
+	ret = smu_get_smc_version(smu, NULL, &smu_version);
+	if (ret) {
+		pr_err("Failed to get smu version!\n");
+		return ret;
+	}
+
+	/* PPSMC_MSG_DFCstateControl is supported with 40.50 and later fws */
+	if (smu_version < 0x283200) {
+		pr_err("Df cstate control is supported with 40.50 and later SMC fw!\n");
+		return -EINVAL;
+	}
+
+	return smu_send_smc_msg_with_param(smu, SMU_MSG_DFCstateControl, state);
+}
+
+static int vega20_update_pcie_parameters(struct smu_context *smu,
+				     uint32_t pcie_gen_cap,
+				     uint32_t pcie_width_cap)
+{
+	PPTable_t *pptable = smu->smu_table.driver_pptable;
+	int ret, i;
+	uint32_t smu_pcie_arg;
+
+	for (i = 0; i < NUM_LINK_LEVELS; i++) {
+		smu_pcie_arg = (i << 16) |
+			((pptable->PcieGenSpeed[i] <= pcie_gen_cap) ? (pptable->PcieGenSpeed[i] << 8) :
+				(pcie_gen_cap << 8)) | ((pptable->PcieLaneCount[i] <= pcie_width_cap) ?
+					pptable->PcieLaneCount[i] : pcie_width_cap);
+		ret = smu_send_smc_msg_with_param(smu,
+					  SMU_MSG_OverridePcieParameters,
+					  smu_pcie_arg);
+	}
+
+	return ret;
+}
+
+
 static const struct pptable_funcs vega20_ppt_funcs = {
 	.tables_init = vega20_tables_init,
 	.alloc_dpm_context = vega20_allocate_dpm_context,
@@ -3153,7 +3191,7 @@ static const struct pptable_funcs vega20_ppt_funcs = {
 	.get_smu_table_index = vega20_get_smu_table_index,
 	.get_smu_power_index = vega20_get_pwr_src_index,
 	.get_workload_type = vega20_get_workload_type,
-	.run_afll_btc = vega20_run_btc_afll,
+	.run_btc = vega20_run_btc_afll,
 	.get_allowed_feature_mask = vega20_get_allowed_feature_mask,
 	.get_current_power_state = vega20_get_current_power_state,
 	.set_default_dpm_table = vega20_set_default_dpm_table,
@@ -3183,13 +3221,12 @@ static const struct pptable_funcs vega20_ppt_funcs = {
 	.get_fan_speed_percent = vega20_get_fan_speed_percent,
 	.get_fan_speed_rpm = vega20_get_fan_speed_rpm,
 	.set_watermarks_table = vega20_set_watermarks_table,
-	.get_thermal_temperature_range = vega20_get_thermal_temperature_range
+	.get_thermal_temperature_range = vega20_get_thermal_temperature_range,
+	.set_df_cstate = vega20_set_df_cstate,
+	.update_pcie_parameters = vega20_update_pcie_parameters
 };
 
 void vega20_set_ppt_funcs(struct smu_context *smu)
 {
-	struct smu_table_context *smu_table = &smu->smu_table;
-
 	smu->ppt_funcs = &vega20_ppt_funcs;
-	smu_table->table_count = TABLE_COUNT;
 }

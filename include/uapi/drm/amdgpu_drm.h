@@ -132,6 +132,11 @@ extern "C" {
  * releasing the memory
  */
 #define AMDGPU_GEM_CREATE_VRAM_WIPE_ON_RELEASE	(1 << 9)
+/* Flag that BO will be encrypted and that the TMZ bit should be
+ * set in the PTEs when mapping this buffer via GPUVM or
+ * accessing it with various hw blocks
+ */
+#define AMDGPU_GEM_CREATE_ENCRYPTED		(1 << 10)
 
 struct drm_amdgpu_gem_create_in  {
 	/** the requested memory size */
@@ -198,6 +203,9 @@ union drm_amdgpu_bo_list {
 #define AMDGPU_CTX_OP_FREE_CTX	2
 #define AMDGPU_CTX_OP_QUERY_STATE	3
 #define AMDGPU_CTX_OP_QUERY_STATE2	4
+
+/* Flag the command submission as secure */
+#define AMDGPU_CS_FLAGS_SECURE          (1 << 0)
 
 /* GPU reset status */
 #define AMDGPU_CTX_NO_RESET		0
@@ -500,6 +508,8 @@ struct drm_amdgpu_gem_op {
 #define AMDGPU_VM_MTYPE_CC		(3 << 5)
 /* Use UC MTYPE instead of default MTYPE */
 #define AMDGPU_VM_MTYPE_UC		(4 << 5)
+/* Use RW MTYPE instead of default MTYPE */
+#define AMDGPU_VM_MTYPE_RW		(5 << 5)
 
 struct drm_amdgpu_gem_va {
 	/** GEM object handle */
@@ -552,7 +562,7 @@ struct drm_amdgpu_cs_in {
 	/**  Handle of resource list associated with CS */
 	__u32		bo_list_handle;
 	__u32		num_chunks;
-	__u32		_pad;
+	__u32		flags;
 	/** this points to __u64 * which point to cs chunks */
 	__u64		chunks;
 };

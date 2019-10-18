@@ -93,14 +93,32 @@ const struct attribute_group *df_v3_6_attr_groups[] = {
 		NULL
 };
 
+static int df_v3_6_set_df_cstate(struct amdgpu_device *adev, int allow)
+{
+	int r = 0;
+
+	if (is_support_sw_smu(adev)) {
+		r = smu_set_df_cstate(&adev->smu, allow);
+	} else if (adev->powerplay.pp_funcs
+			&& adev->powerplay.pp_funcs->set_df_cstate) {
+		r = adev->powerplay.pp_funcs->set_df_cstate(
+			adev->powerplay.pp_handle, allow);
+	}
+
+	return r;
+}
+
 static uint64_t df_v3_6_get_fica(struct amdgpu_device *adev,
 				 uint32_t ficaa_val)
 {
 	unsigned long flags, address, data;
 	uint32_t ficadl_val, ficadh_val;
 
-	address = adev->nbio_funcs->get_pcie_index_offset(adev);
-	data = adev->nbio_funcs->get_pcie_data_offset(adev);
+	address = adev->nbio.funcs->get_pcie_index_offset(adev);
+	data = adev->nbio.funcs->get_pcie_data_offset(adev);
+
+	if (df_v3_6_set_df_cstate(adev, DF_CSTATE_DISALLOW))
+		return 0xFFFFFFFFFFFFFFFF;
 
 	spin_lock_irqsave(&adev->pcie_idx_lock, flags);
 	WREG32(address, smnDF_PIE_AON_FabricIndirectConfigAccessAddress3);
@@ -114,6 +132,8 @@ static uint64_t df_v3_6_get_fica(struct amdgpu_device *adev,
 
 	spin_unlock_irqrestore(&adev->pcie_idx_lock, flags);
 
+	df_v3_6_set_df_cstate(adev, DF_CSTATE_ALLOW);
+
 	return (((ficadh_val & 0xFFFFFFFFFFFFFFFF) << 32) | ficadl_val);
 }
 
@@ -122,8 +142,11 @@ static void df_v3_6_set_fica(struct amdgpu_device *adev, uint32_t ficaa_val,
 {
 	unsigned long flags, address, data;
 
-	address = adev->nbio_funcs->get_pcie_index_offset(adev);
-	data = adev->nbio_funcs->get_pcie_data_offset(adev);
+	address = adev->nbio.funcs->get_pcie_index_offset(adev);
+	data = adev->nbio.funcs->get_pcie_data_offset(adev);
+
+	if (df_v3_6_set_df_cstate(adev, DF_CSTATE_DISALLOW))
+		return;
 
 	spin_lock_irqsave(&adev->pcie_idx_lock, flags);
 	WREG32(address, smnDF_PIE_AON_FabricIndirectConfigAccessAddress3);
@@ -134,8 +157,9 @@ static void df_v3_6_set_fica(struct amdgpu_device *adev, uint32_t ficaa_val,
 
 	WREG32(address, smnDF_PIE_AON_FabricIndirectConfigAccessDataHi3);
 	WREG32(data, ficadh_val);
-
 	spin_unlock_irqrestore(&adev->pcie_idx_lock, flags);
+
+	df_v3_6_set_df_cstate(adev, DF_CSTATE_ALLOW);
 }
 
 /*
@@ -150,8 +174,11 @@ static void df_v3_6_perfmon_rreg(struct amdgpu_device *adev,
 {
 	unsigned long flags, address, data;
 
-	address = adev->nbio_funcs->get_pcie_index_offset(adev);
-	data = adev->nbio_funcs->get_pcie_data_offset(adev);
+	address = adev->nbio.funcs->get_pcie_index_offset(adev);
+	data = adev->nbio.funcs->get_pcie_data_offset(adev);
+
+	if (df_v3_6_set_df_cstate(adev, DF_CSTATE_DISALLOW))
+		return;
 
 	spin_lock_irqsave(&adev->pcie_idx_lock, flags);
 	WREG32(address, lo_addr);
@@ -159,6 +186,8 @@ static void df_v3_6_perfmon_rreg(struct amdgpu_device *adev,
 	WREG32(address, hi_addr);
 	*hi_val = RREG32(data);
 	spin_unlock_irqrestore(&adev->pcie_idx_lock, flags);
+
+	df_v3_6_set_df_cstate(adev, DF_CSTATE_ALLOW);
 }
 
 /*
@@ -172,8 +201,11 @@ static void df_v3_6_perfmon_wreg(struct amdgpu_device *adev, uint32_t lo_addr,
 {
 	unsigned long flags, address, data;
 
-	address = adev->nbio_funcs->get_pcie_index_offset(adev);
-	data = adev->nbio_funcs->get_pcie_data_offset(adev);
+	address = adev->nbio.funcs->get_pcie_index_offset(adev);
+	data = adev->nbio.funcs->get_pcie_data_offset(adev);
+
+	if (df_v3_6_set_df_cstate(adev, DF_CSTATE_DISALLOW))
+		return;
 
 	spin_lock_irqsave(&adev->pcie_idx_lock, flags);
 	WREG32(address, lo_addr);
@@ -181,6 +213,8 @@ static void df_v3_6_perfmon_wreg(struct amdgpu_device *adev, uint32_t lo_addr,
 	WREG32(address, hi_addr);
 	WREG32(data, hi_val);
 	spin_unlock_irqrestore(&adev->pcie_idx_lock, flags);
+
+	df_v3_6_set_df_cstate(adev, DF_CSTATE_ALLOW);
 }
 
 /* get the number of df counters available */
@@ -218,6 +252,13 @@ static void df_v3_6_sw_init(struct amdgpu_device *adev)
 
 	for (i = 0; i < AMDGPU_MAX_DF_PERFMONS; i++)
 		adev->df_perfmon_config_assign_mask[i] = 0;
+}
+
+static void df_v3_6_sw_fini(struct amdgpu_device *adev)
+{
+
+	device_remove_file(adev->dev, &dev_attr_df_cntr_avail);
+
 }
 
 static void df_v3_6_enable_broadcast_mode(struct amdgpu_device *adev,
@@ -505,7 +546,7 @@ static void df_v3_6_pmc_get_count(struct amdgpu_device *adev,
 				  uint64_t config,
 				  uint64_t *count)
 {
-	uint32_t lo_base_addr, hi_base_addr, lo_val, hi_val;
+	uint32_t lo_base_addr, hi_base_addr, lo_val = 0, hi_val = 0;
 	*count = 0;
 
 	switch (adev->asic_type) {
@@ -537,6 +578,7 @@ static void df_v3_6_pmc_get_count(struct amdgpu_device *adev,
 
 const struct amdgpu_df_funcs df_v3_6_funcs = {
 	.sw_init = df_v3_6_sw_init,
+	.sw_fini = df_v3_6_sw_fini,
 	.enable_broadcast_mode = df_v3_6_enable_broadcast_mode,
 	.get_fb_channel_number = df_v3_6_get_fb_channel_number,
 	.get_hbm_channel_number = df_v3_6_get_hbm_channel_number,
