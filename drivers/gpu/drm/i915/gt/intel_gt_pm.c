@@ -180,7 +180,7 @@ int intel_gt_resume(struct intel_gt *gt)
 			GEM_BUG_ON(!intel_context_is_pinned(ce));
 			mutex_acquire(&ce->pin_mutex.dep_map, 0, 0, _THIS_IP_);
 			ce->ops->reset(ce);
-			mutex_release(&ce->pin_mutex.dep_map, 0, _THIS_IP_);
+			mutex_release(&ce->pin_mutex.dep_map, _THIS_IP_);
 		}
 
 		engine->serial++; /* kernel context lost */

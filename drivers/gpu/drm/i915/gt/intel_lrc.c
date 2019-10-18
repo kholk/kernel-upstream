@@ -242,7 +242,7 @@ static void __context_pin_acquire(struct intel_context *ce)
 
 static void __context_pin_release(struct intel_context *ce)
 {
-	mutex_release(&ce->pin_mutex.dep_map, 0, _RET_IP_);
+	mutex_release(&ce->pin_mutex.dep_map, _RET_IP_);
 }
 
 static void mark_eio(struct i915_request *rq)
