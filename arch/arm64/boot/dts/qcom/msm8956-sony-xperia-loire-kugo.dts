@@ -52,7 +52,7 @@
 
 &dsi0 {
 	jdi_panel0: h455tax01-panel@0 {
-		compatible = "jdi,syn-incell-h455tax01";
+		compatible = "jdi,h455tax01-lcd";
 		reg = <0>;
 		status = "okay";
 		disp-te-gpio = <&msm_gpio 24 1>;

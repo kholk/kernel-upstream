@@ -24,7 +24,7 @@
 
 &dsi0 {
 	lgd_panel0: lgd-panel@0 {
-		compatible = "lgd,syn-incell-fhd-ips-lcd";
+		compatible = "lg,lh497wf2-sd01-lcd";
 		reg = <0>;
 		status = "okay";
 		disp-te-gpio = <&msm_gpio 24 0>;
