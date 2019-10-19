@@ -1,16 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
+ * LG LH497WF2-SD01-MP IPS LCD Panel Driver
  * Copyright (C) 2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
- * from DT configurations on Sony Xperia Tone platform
- * LG xxxx IPS LCD Panel Driver -- TODO: RETRIEVE PANEL MODEL!!!
- *
+ * Parameters from dsi-panel-somc-synaptics-lgd-1080p-cmd.dtsi are
  * Copyright (c) 2016 Sony Mobile Communications Inc.
- * Parameters from dsi-panel-somc-synaptics-lgd-1080p-cmd.dtsi
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
-*/
+ */
 
 #include <linux/backlight.h>
 #include <linux/gpio/consumer.h>
@@ -29,7 +24,7 @@
 
 //#define MDSS_BUG_SOLVED
 
-struct lgd_fhd_ips_panel {
+struct lg_lh497wf2_panel {
 	struct drm_panel base;
 	struct mipi_dsi_device *dsi;
 
@@ -67,14 +62,14 @@ static const u8 cmd_on_unk4[10] =
 	};
 
 
-static inline struct lgd_fhd_ips_panel *to_lgd_fhd_ips(struct drm_panel *panel)
+static inline struct lg_lh497wf2_panel *to_lg_lh497wf2(struct drm_panel *panel)
 {
-	return container_of(panel, struct lgd_fhd_ips_panel, base);
+	return container_of(panel, struct lg_lh497wf2_panel, base);
 }
 
-static int lgd_fhd_ips_panel_enable(struct drm_panel *panel)
+static int lg_lh497wf2_panel_enable(struct drm_panel *panel)
 {
-	struct lgd_fhd_ips_panel *lgd_panel = to_lgd_fhd_ips(panel);
+	struct lg_lh497wf2_panel *lgd_panel = to_lg_lh497wf2(panel);
 
 	if (lgd_panel->enabled)
 		return 0;
@@ -84,7 +79,7 @@ static int lgd_fhd_ips_panel_enable(struct drm_panel *panel)
 	return 0;
 }
 
-static int lgd_fhd_ips_panel_init(struct lgd_fhd_ips_panel *lgd_panel)
+static int lg_lh497wf2_panel_init(struct lg_lh497wf2_panel *lgd_panel)
 {
 	struct device *dev = &lgd_panel->dsi->dev;
 	ssize_t wr_sz = 0;
@@ -123,7 +118,7 @@ static int lgd_fhd_ips_panel_init(struct lgd_fhd_ips_panel *lgd_panel)
 	return rc;
 }
 
-static int lgd_fhd_ips_panel_on(struct lgd_fhd_ips_panel *lgd_panel)
+static int lg_lh497wf2_panel_on(struct lg_lh497wf2_panel *lgd_panel)
 {
 	struct device *dev = &lgd_panel->dsi->dev;
 	int rc = 0;
@@ -139,9 +134,9 @@ static int lgd_fhd_ips_panel_on(struct lgd_fhd_ips_panel *lgd_panel)
 	return rc;
 }
 
-static int lgd_fhd_ips_panel_disable(struct drm_panel *panel)
+static int lg_lh497wf2_panel_disable(struct drm_panel *panel)
 {
-	struct lgd_fhd_ips_panel *lgd_panel = to_lgd_fhd_ips(panel);
+	struct lg_lh497wf2_panel *lgd_panel = to_lg_lh497wf2(panel);
 
 	if (!lgd_panel->enabled)
 		return 0;
@@ -151,7 +146,7 @@ static int lgd_fhd_ips_panel_disable(struct drm_panel *panel)
 	return 0;
 }
 
-static int lgd_fhd_ips_panel_off(struct lgd_fhd_ips_panel *lgd_panel)
+static int lg_lh497wf2_panel_off(struct lg_lh497wf2_panel *lgd_panel)
 {
 	struct device *dev = &lgd_panel->dsi->dev;
 	int rc;
@@ -171,9 +166,9 @@ static int lgd_fhd_ips_panel_off(struct lgd_fhd_ips_panel *lgd_panel)
 	return rc;
 }
 
-static int lgd_fhd_ips_panel_unprepare(struct drm_panel *panel)
+static int lg_lh497wf2_panel_unprepare(struct drm_panel *panel)
 {
-	struct lgd_fhd_ips_panel *lgd_panel = to_lgd_fhd_ips(panel);
+	struct lg_lh497wf2_panel *lgd_panel = to_lg_lh497wf2(panel);
 	int rc = 0;
 
 	if (!lgd_panel->prepared)
@@ -184,7 +179,7 @@ static int lgd_fhd_ips_panel_unprepare(struct drm_panel *panel)
 		usleep_range(10000, 11000);
 	}
 #endif
-	lgd_fhd_ips_panel_off(lgd_panel);
+	lg_lh497wf2_panel_off(lgd_panel);
 
 	/* TODO: LAB/IBB */
 #ifdef MDSS_BUG_SOLVED
@@ -204,9 +199,9 @@ static int lgd_fhd_ips_panel_unprepare(struct drm_panel *panel)
 	return rc;
 }
 
-static int lgd_fhd_ips_panel_prepare(struct drm_panel *panel)
+static int lg_lh497wf2_panel_prepare(struct drm_panel *panel)
 {
-	struct lgd_fhd_ips_panel *lgd_panel = to_lgd_fhd_ips(panel);
+	struct lg_lh497wf2_panel *lgd_panel = to_lg_lh497wf2(panel);
 	struct device *dev = &lgd_panel->dsi->dev;
 	int rc;
 
@@ -258,13 +253,13 @@ static int lgd_fhd_ips_panel_prepare(struct drm_panel *panel)
 	};
 #endif
 
-	rc = lgd_fhd_ips_panel_init(lgd_panel);
+	rc = lg_lh497wf2_panel_init(lgd_panel);
 	if (rc < 0) {
 		dev_err(dev, "Cannot initialize panel: %d\n", rc);
 		goto poweroff_s2;
 	}
 
-	rc = lgd_fhd_ips_panel_on(lgd_panel);
+	rc = lg_lh497wf2_panel_on(lgd_panel);
 	if (rc < 0) {
 		dev_err(dev, "Cannot poweron panel: %d\n", rc);
 		goto poweroff_s2;
@@ -303,10 +298,10 @@ static const struct drm_display_mode default_mode = {
 	//.flags = 0,
 };
 
-static int lgd_fhd_ips_panel_get_modes(struct drm_panel *panel)
+static int lg_lh497wf2_panel_get_modes(struct drm_panel *panel)
 {
 	struct drm_display_mode *mode;
-	struct lgd_fhd_ips_panel *lgd_panel = to_lgd_fhd_ips(panel);
+	struct lg_lh497wf2_panel *lgd_panel = to_lg_lh497wf2(panel);
 	struct device *dev = &lgd_panel->dsi->dev;
 
 	mode = drm_mode_duplicate(panel->drm, &default_mode);
@@ -327,21 +322,21 @@ static int lgd_fhd_ips_panel_get_modes(struct drm_panel *panel)
 	return 1;
 }
 
-static const struct drm_panel_funcs lgd_fhd_ips_panel_funcs = {
-	.disable = lgd_fhd_ips_panel_disable,
-	.unprepare = lgd_fhd_ips_panel_unprepare,
-	.prepare = lgd_fhd_ips_panel_prepare,
-	.enable = lgd_fhd_ips_panel_enable,
-	.get_modes = lgd_fhd_ips_panel_get_modes,
+static const struct drm_panel_funcs lg_lh497wf2_panel_funcs = {
+	.disable = lg_lh497wf2_panel_disable,
+	.unprepare = lg_lh497wf2_panel_unprepare,
+	.prepare = lg_lh497wf2_panel_prepare,
+	.enable = lg_lh497wf2_panel_enable,
+	.get_modes = lg_lh497wf2_panel_get_modes,
 };
 
-static const struct of_device_id lgd_fhd_ips_of_match[] = {
-	{ .compatible = "lgd,syn-incell-fhd-ips-lcd", },
+static const struct of_device_id lg_lh497wf2_of_match[] = {
+	{ .compatible = "lg,lh497wf2-sd01-lcd", },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, lgd_fhd_ips_of_match);
+MODULE_DEVICE_TABLE(of, lg_lh497wf2_of_match);
 
-static int lgd_fhd_ips_panel_add(struct lgd_fhd_ips_panel *lgd_panel)
+static int lg_lh497wf2_panel_add(struct lg_lh497wf2_panel *lgd_panel)
 {
 	struct device *dev = &lgd_panel->dsi->dev;
 	int rc;
@@ -393,7 +388,7 @@ static int lgd_fhd_ips_panel_add(struct lgd_fhd_ips_panel *lgd_panel)
 	}
 
 	drm_panel_init(&lgd_panel->base);
-	lgd_panel->base.funcs = &lgd_fhd_ips_panel_funcs;
+	lgd_panel->base.funcs = &lg_lh497wf2_panel_funcs;
 	lgd_panel->base.dev = dev;
 
 	rc = drm_panel_add(&lgd_panel->base);
@@ -403,15 +398,15 @@ static int lgd_fhd_ips_panel_add(struct lgd_fhd_ips_panel *lgd_panel)
 	return rc;
 }
 
-static void lgd_fhd_ips_panel_del(struct lgd_fhd_ips_panel *lgd_panel)
+static void lg_lh497wf2_panel_del(struct lg_lh497wf2_panel *lgd_panel)
 {
 	if (lgd_panel->base.dev)
 		drm_panel_remove(&lgd_panel->base);
 }
 
-static int lgd_fhd_ips_panel_probe(struct mipi_dsi_device *dsi)
+static int lg_lh497wf2_panel_probe(struct mipi_dsi_device *dsi)
 {
-	struct lgd_fhd_ips_panel *lgd_panel;
+	struct lg_lh497wf2_panel *lgd_panel;
 	int rc;
 
 	dsi->lanes = 4;
@@ -425,20 +420,20 @@ static int lgd_fhd_ips_panel_probe(struct mipi_dsi_device *dsi)
 	mipi_dsi_set_drvdata(dsi, lgd_panel);
 	lgd_panel->dsi = dsi;
 
-	rc = lgd_fhd_ips_panel_add(lgd_panel);
+	rc = lg_lh497wf2_panel_add(lgd_panel);
 	if (rc < 0)
 		return rc;
 
 	return mipi_dsi_attach(dsi);
 }
 
-static int lgd_fhd_ips_panel_remove(struct mipi_dsi_device *dsi)
+static int lg_lh497wf2_panel_remove(struct mipi_dsi_device *dsi)
 {
-	struct lgd_fhd_ips_panel *lgd_panel = mipi_dsi_get_drvdata(dsi);
+	struct lg_lh497wf2_panel *lgd_panel = mipi_dsi_get_drvdata(dsi);
 	struct device *dev = &lgd_panel->dsi->dev;
 	int ret;
 
-	ret = lgd_fhd_ips_panel_disable(&lgd_panel->base);
+	ret = lg_lh497wf2_panel_disable(&lgd_panel->base);
 	if (ret < 0)
 		dev_err(dev, "failed to disable panel: %d\n", ret);
 
@@ -446,28 +441,28 @@ static int lgd_fhd_ips_panel_remove(struct mipi_dsi_device *dsi)
 	if (ret < 0)
 		dev_err(dev, "Cannot detach from DSI host: %d\n", ret);
 
-	lgd_fhd_ips_panel_del(lgd_panel);
+	lg_lh497wf2_panel_del(lgd_panel);
 
 	return 0;
 }
 
-static void lgd_fhd_ips_panel_shutdown(struct mipi_dsi_device *dsi)
+static void lg_lh497wf2_panel_shutdown(struct mipi_dsi_device *dsi)
 {
-	struct lgd_fhd_ips_panel *lgd_panel = mipi_dsi_get_drvdata(dsi);
+	struct lg_lh497wf2_panel *lgd_panel = mipi_dsi_get_drvdata(dsi);
 
-	lgd_fhd_ips_panel_disable(&lgd_panel->base);
+	lg_lh497wf2_panel_disable(&lgd_panel->base);
 }
 
-static struct mipi_dsi_driver lgd_fhd_ips_panel_driver = {
+static struct mipi_dsi_driver lg_lh497wf2_panel_driver = {
 	.driver = {
-		.name = "panel-lgd-fhd-ips",
-		.of_match_table = lgd_fhd_ips_of_match,
+		.name = "panel-lg-lh497wf2-sd01",
+		.of_match_table = lg_lh497wf2_of_match,
 	},
-	.probe = lgd_fhd_ips_panel_probe,
-	.remove = lgd_fhd_ips_panel_remove,
-	.shutdown = lgd_fhd_ips_panel_shutdown,
+	.probe = lg_lh497wf2_panel_probe,
+	.remove = lg_lh497wf2_panel_remove,
+	.shutdown = lg_lh497wf2_panel_shutdown,
 };
-module_mipi_dsi_driver(lgd_fhd_ips_panel_driver);
+module_mipi_dsi_driver(lg_lh497wf2_panel_driver);
 
 MODULE_AUTHOR("AngeloGioacchino Del Regno <kholk11@gmail.com>");
 MODULE_DESCRIPTION("LGD FullHD IPS MIPI LCD");

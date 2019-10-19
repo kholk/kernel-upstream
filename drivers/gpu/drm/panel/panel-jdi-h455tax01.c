@@ -1,16 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
+ * JDI H455TAX01 IPS LCD Panel Driver
  * Copyright (C) 2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
- * from DT configurations on Sony Xperia Loire platform
- * H455TAX01.0 IPS LCD Panel Driver
- *
+ * Parameters from dsi-panel-somc-synaptics-jdi-720p-cmd.dtsi are
  * Copyright (c) 2016 Sony Mobile Communications Inc.
- * Parameters from dsi-panel-somc-synaptics-jdi-720p-cmd.dtsi
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
-*/
+ */
 
 #include <linux/backlight.h>
 #include <linux/gpio/consumer.h>
@@ -402,7 +397,7 @@ static const struct drm_panel_funcs h455tax01_panel_funcs = {
 };
 
 static const struct of_device_id h455tax01_of_match[] = {
-	{ .compatible = "jdi,syn-incell-h455tax01", },
+	{ .compatible = "jdi,h455tax01-lcd", },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, h455tax01_of_match);
