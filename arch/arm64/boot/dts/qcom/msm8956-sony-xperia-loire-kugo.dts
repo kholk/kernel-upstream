@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2014 Sony Mobile Communications Inc.
+ * Copyright (c) 2016-2019 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ */
+
+/dts-v1/;
+
+#include "msm8956-sony-xperia-loire.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Sony Xperia X Compact (Loire Kugo)";
+	compatible = "sony,xperia-kugo", "qcom,msm8956";
+
+	qcom,msm-id = <266 0x10001>; /* MSM8956 PM/PMI8956 */
+	qcom,board-id = <8 0>;
+};
+
+&blsp_i2c6 {
+	status = "ok";
+};
+
+&pm8950_l1 {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1300000>;
+};
+
+/* Machine specific pins */
+&tlmm {
+	usb_cable_det_n_gpio: usb_cable_det_n {
+		pins = "gpio107";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-pull-up;
+		input-enable;
+	};
+
+	usb_cable_sense_en_gpio: usb_cable_sense_en {
+		pins = "gpio116";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+
+	usb_cc_int_n_gpio: usb_cc_int_n {
+		pins = "gpio131";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-pull-up;
+		input-enable;
+	};
+};
