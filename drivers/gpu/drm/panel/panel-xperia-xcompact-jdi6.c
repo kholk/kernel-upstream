@@ -8,13 +8,13 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 
-#include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_panel.h>
@@ -452,15 +452,10 @@ static int xp_xc_jdi6_panel_add(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 		xp_xc_jdi6_panel->ts_reset_gpio = NULL;
 	}
 
-	drm_panel_init(&xp_xc_jdi6_panel->base);
-	xp_xc_jdi6_panel->base.funcs = &xp_xc_jdi6_panel_funcs;
-	xp_xc_jdi6_panel->base.dev = dev;
+	drm_panel_init(&xp_xc_jdi6_panel->base, &xp_xc_jdi6_panel->dsi->dev,
+		       &xp_xc_jdi6_panel_funcs, DRM_MODE_CONNECTOR_DSI);
 
-	rc = drm_panel_add(&xp_xc_jdi6_panel->base);
-	if (rc < 0)
-		pr_err("drm panel add failed\n");
-
-	return rc;
+	return drm_panel_add(&xp_xc_jdi6_panel->base);
 }
 
 static void xp_xc_jdi6_panel_del(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)

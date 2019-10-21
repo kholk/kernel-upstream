@@ -8,6 +8,7 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
@@ -386,15 +387,10 @@ static int lg_lh497wf2_panel_add(struct lg_lh497wf2_panel *lgd_panel)
 		lgd_panel->ts_reset_gpio = NULL;
 	}
 
-	drm_panel_init(&lgd_panel->base);
-	lgd_panel->base.funcs = &lg_lh497wf2_panel_funcs;
-	lgd_panel->base.dev = dev;
+	drm_panel_init(&lgd_panel->base, &lgd_panel->dsi->dev,
+		       &lg_lh497wf2_panel_funcs, DRM_MODE_CONNECTOR_DSI);
 
-	rc = drm_panel_add(&lgd_panel->base);
-	if (rc < 0)
-		pr_err("drm panel add failed\n");
-
-	return rc;
+	return drm_panel_add(&lgd_panel->base);
 }
 
 static void lg_lh497wf2_panel_del(struct lg_lh497wf2_panel *lgd_panel)
