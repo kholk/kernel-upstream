@@ -20,6 +20,7 @@
 #include <drm/drm_panel.h>
 
 #include <video/display_timing.h>
+#include <video/mipi_display.h>
 #include <video/videomode.h>
 
 #define MDSS_BUG_SOLVED
@@ -94,7 +95,7 @@ static int xp_xc_jdi6_panel_enable(struct drm_panel *panel)
 static int xp_xc_jdi6_panel_init(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 {
 	struct mipi_dsi_device *dsi = xp_xc_jdi6_panel->dsi;
-	struct drm_display_mode *mode = xp_xc_jdi6_panel->mode;
+	const struct drm_display_mode *mode = xp_xc_jdi6_panel->mode;
 	struct device *dev = &dsi->dev;
 	ssize_t wr_sz = 0;
 	int rc = 0;
@@ -140,7 +141,8 @@ static int xp_xc_jdi6_panel_init(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 		return rc;
 	}
 
-	wr_sz = mipi_dsi_dcs_write(dsi, MIPI_DCS_SET_ADDRESS_MODE, 0x00};
+	wr_sz = mipi_dsi_dcs_write(dsi, MIPI_DCS_SET_ADDRESS_MODE,
+				   (u8[]){ 0x24 }, 1);
 	if (wr_sz < 0)
 		return (int)wr_sz;
 
@@ -162,7 +164,7 @@ static int xp_xc_jdi6_panel_init(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 	if (rc < 0)
 		return rc;
 
-	rc = mipi_dsi_dcs_exit_sleep_mode(xp_xc_jdi6_panel->dsi);
+	rc = mipi_dsi_dcs_exit_sleep_mode(dsi);
 	if (rc < 0) {
 		dev_err(dev, "Cannot send exit sleep cmd: %d\n", rc);
 		return rc;
@@ -434,7 +436,6 @@ MODULE_DEVICE_TABLE(of, xp_xc_jdi6_of_match);
 static int xp_xc_jdi6_panel_add(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 {
 	struct device *dev = &xp_xc_jdi6_panel->dsi->dev;
-	int rc;
 
 	xp_xc_jdi6_panel->mode = &default_mode;
 
