@@ -23,8 +23,6 @@
 #include <video/mipi_display.h>
 #include <video/videomode.h>
 
-#define MDSS_BUG_SOLVED
-
 struct xp_xc_jdi6_panel {
 	struct drm_panel base;
 	struct mipi_dsi_device *dsi;
@@ -100,7 +98,13 @@ static int xp_xc_jdi6_panel_init(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 	ssize_t wr_sz = 0;
 	int rc = 0;
 
-	xp_xc_jdi6_panel->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+
+	rc = mipi_dsi_dcs_soft_reset(dsi);
+	if (rc < 0)
+		return rc;
+
+	usleep_range(10000, 20000);
 
 	wr_sz = mipi_dsi_generic_write(dsi, cmd_mcap_off,
 					sizeof(cmd_mcap_off));
@@ -142,7 +146,7 @@ static int xp_xc_jdi6_panel_init(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 	}
 
 	wr_sz = mipi_dsi_dcs_write(dsi, MIPI_DCS_SET_ADDRESS_MODE,
-				   (u8[]){ 0x24 }, 1);
+				   (u8[]){ 0x00 }, 1);
 	if (wr_sz < 0)
 		return (int)wr_sz;
 
@@ -266,16 +270,15 @@ static int xp_xc_jdi6_panel_unprepare(struct drm_panel *panel)
 
 	if (!xp_xc_jdi6_panel->prepared)
 		return 0;
-#ifdef MDSS_BUG_SOLVED
+
 	if (xp_xc_jdi6_panel->ts_reset_gpio) {
 		gpiod_set_value(xp_xc_jdi6_panel->ts_reset_gpio, 0);
 		usleep_range(10000, 11000);
 	}
-#endif
+
 	xp_xc_jdi6_panel_off(xp_xc_jdi6_panel);
 
 	/* TODO: LAB/IBB */
-#ifdef MDSS_BUG_SOLVED
 	regulator_disable(xp_xc_jdi6_panel->tvdd_supply);
 	regulator_disable(xp_xc_jdi6_panel->avdd_supply);
 	regulator_disable(xp_xc_jdi6_panel->vddio_supply);
@@ -285,7 +288,6 @@ static int xp_xc_jdi6_panel_unprepare(struct drm_panel *panel)
 		usleep_range(10000, 11000);
 	}
 
-#endif
 	xp_xc_jdi6_panel->prepared = false;
 
 	return rc;
@@ -316,7 +318,6 @@ static int xp_xc_jdi6_panel_prepare(struct drm_panel *panel)
 
 	/* TODO: LAB/IBB */
 
-#ifdef MDSS_BUG_SOLVED
 	/* Enable the in-cell supply to panel */
 	rc = regulator_enable(xp_xc_jdi6_panel->tvdd_supply);
 	if (rc < 0) {
@@ -325,7 +326,7 @@ static int xp_xc_jdi6_panel_prepare(struct drm_panel *panel)
 	} else {
 		usleep_range(1000, 1100);
 	}
-#endif
+
 	/* Enable the in-cell supply to touch-controller */
 	rc = regulator_enable(xp_xc_jdi6_panel->tvddio_supply);
 	if (rc) {
@@ -337,7 +338,6 @@ static int xp_xc_jdi6_panel_prepare(struct drm_panel *panel)
 	if (xp_xc_jdi6_panel->ts_reset_gpio)
 		gpiod_set_value(xp_xc_jdi6_panel->ts_reset_gpio, 0);
 
-#ifdef MDSS_BUG_SOLVED
 	if (xp_xc_jdi6_panel->pan_reset_gpio) {
 		gpiod_set_value(xp_xc_jdi6_panel->pan_reset_gpio, 0);
 		usleep_range(10000, 11000);
@@ -348,7 +348,6 @@ static int xp_xc_jdi6_panel_prepare(struct drm_panel *panel)
 		gpiod_set_value(xp_xc_jdi6_panel->pan_reset_gpio, 1);
 		usleep_range(16000, 17000);
 	};
-#endif
 
 	if (xp_xc_jdi6_panel->ts_reset_gpio)
 		gpiod_set_value(xp_xc_jdi6_panel->ts_reset_gpio, 1);
