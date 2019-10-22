@@ -851,7 +851,7 @@
 			    <&gcc GCC_GFX3D_TBU1_CLK>,
 			    <&gcc GCC_GFX3D_OXILI_AON_CLK>;
 
-			power-domains = <&gcc OXILI_CX_GDSC>;
+			power-domains = <&gcc OXILI_GX_GDSC>;
 			operating-points-v2 = <&gpu_opp_table>;
 			iommus = <&gpu_iommu 0>;
 
