@@ -22,7 +22,7 @@
 #include <video/display_timing.h>
 #include <video/videomode.h>
 
-//#define MDSS_BUG_SOLVED
+#define MDSS_BUG_SOLVED
 
 struct xp_xc_jdi6_panel {
 	struct drm_panel base;
@@ -45,21 +45,28 @@ struct xp_xc_jdi6_panel {
 	const struct drm_display_mode *mode;
 };
 
-static const u8 cmd_unk1[2] = {0xb0, 0x00};
-static const u8 cmd_unk2[2] = {0xd6, 0x01};
+#define R63452_GEN_SET_MCAP		0xb0
+#define MCAP_OFF			0x00	/* Unlock all */
+#define MCAP_LOCK			0x03	/* Lock all */
+
+#define R63452_GEN_CTRL_NVM		0xd6
+#define NVM_RELOAD_OFF			0x01
+
+/* Manufacturer Command Access Protect (MCAP) */
+static const u8 cmd_mcap_off[2] = {R63452_GEN_SET_MCAP, MCAP_OFF};
+static const u8 cmd_mcap_lock[2] = {R63452_GEN_SET_MCAP, MCAP_LOCK};
+
+/* Remove NVM reload after sleep out */
+static const u8 cmd_nvm_reload_off[2] = {R63452_GEN_CTRL_NVM, NVM_RELOAD_OFF};
+
+/* Unknown needed magic commands */
 static const u8 cmd_on_unk3[3] = {0xc4, 0x70, 0x03};
+
 static const u8 cmd_on_unk4[14] =
 	{
 		0xEC, 0x64, 0xDC, 0x7A, 0x7A, 0x3D, 0x00, 0x0B,
 		0x0B, 0x13, 0x15, 0x68, 0x0B, 0xB5,
 	};
-static const u8 cmd_unk5[2] = {0xb0, 0x03};
-static const u8 cmd_on_unk6[2] = {0x35, 0x00};
-static const u8 cmd_on_unk7[2] = {0x36, 0x00};
-static const u8 cmd_on_unk8[2] = {0x3A, 0x77};
-static const u8 cmd_on_unk9[5] = {0x2A, 0x00, 0x00, 0x02, 0xCF};
-static const u8 cmd_on_unk10[5] = {0x2B, 0x00, 0x00, 0x04, 0xFF};
-static const u8 cmd_on_unk11[3] = {0x44, 0x00, 0x00};
 
 static const u8 cmd_off_unk4[14] =
 	{
@@ -86,66 +93,74 @@ static int xp_xc_jdi6_panel_enable(struct drm_panel *panel)
 
 static int xp_xc_jdi6_panel_init(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 {
-	struct device *dev = &xp_xc_jdi6_panel->dsi->dev;
+	struct mipi_dsi_device *dsi = xp_xc_jdi6_panel->dsi;
+	struct drm_display_mode *mode = xp_xc_jdi6_panel->mode;
+	struct device *dev = &dsi->dev;
 	ssize_t wr_sz = 0;
 	int rc = 0;
 
 	xp_xc_jdi6_panel->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_unk1, sizeof(cmd_unk1));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 1: %ld\n", wr_sz);
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_mcap_off,
+					sizeof(cmd_mcap_off));
+	if (wr_sz < 0) {
+		dev_err(dev, "Cannot send mcap-off command : %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_unk2, sizeof(cmd_unk2));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 2: %ld\n", wr_sz);
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_nvm_reload_off,
+					sizeof(cmd_nvm_reload_off));
+	if (wr_sz < 0) {
+		dev_err(dev, "Cannot send nvm-off command : %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk3, sizeof(cmd_on_unk3));
-	if (wr_sz < 0)
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_on_unk3, sizeof(cmd_on_unk3));
+	if (wr_sz < 0) {
 		dev_err(dev, "Cannot send ON command 3: %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk4, sizeof(cmd_on_unk4));
-	if (wr_sz < 0)
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_on_unk4, sizeof(cmd_on_unk4));
+	if (wr_sz < 0) {
 		dev_err(dev, "Cannot send ON command 4: %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_unk5, sizeof(cmd_unk5));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 5: %ld\n", wr_sz);
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_mcap_lock,
+					sizeof(cmd_mcap_lock));
+	if (wr_sz < 0) {
+		dev_err(dev, "Cannot send mcap-lock command: %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk6, sizeof(cmd_on_unk6));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 6: %ld\n", wr_sz);
+	rc = mipi_dsi_dcs_set_tear_on(dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
+	if (rc < 0) {
+		dev_err(dev, "Cannot send tear-on command: %ld\n", wr_sz);
+		return rc;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk7, sizeof(cmd_on_unk7));
+	wr_sz = mipi_dsi_dcs_write(dsi, MIPI_DCS_SET_ADDRESS_MODE, 0x00};
 	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 7: %ld\n", wr_sz);
+		return (int)wr_sz;
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk8, sizeof(cmd_on_unk8));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 8: %ld\n", wr_sz);
+	/* Set DrIC and I/F to 24bpp */
+	rc = mipi_dsi_dcs_set_pixel_format(dsi, MIPI_DCS_PIXEL_FMT_24BIT |
+					   (MIPI_DCS_PIXEL_FMT_24BIT << 4));
+	if (rc < 0)
+		return rc;
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk9, sizeof(cmd_on_unk9));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 9: %ld\n", wr_sz);
+	rc = mipi_dsi_dcs_set_column_address(dsi, 0, mode->hdisplay - 1);
+	if (rc < 0)
+		return rc;
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk10, sizeof(cmd_on_unk10));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 10: %ld\n", wr_sz);
+	rc = mipi_dsi_dcs_set_page_address(dsi, 0, mode->vdisplay - 1);
+	if (rc < 0)
+		return rc;
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_on_unk11, sizeof(cmd_on_unk11));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send ON command 11: %ld\n", wr_sz);
+	rc = mipi_dsi_dcs_set_tear_scanline(dsi, 0);
+	if (rc < 0)
+		return rc;
 
 	rc = mipi_dsi_dcs_exit_sleep_mode(xp_xc_jdi6_panel->dsi);
 	if (rc < 0) {
@@ -162,6 +177,8 @@ static int xp_xc_jdi6_panel_on(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 {
 	struct device *dev = &xp_xc_jdi6_panel->dsi->dev;
 	int rc = 0;
+
+	xp_xc_jdi6_panel->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
 	rc = mipi_dsi_dcs_set_display_on(xp_xc_jdi6_panel->dsi);
 	if (rc < 0) {
@@ -188,39 +205,52 @@ static int xp_xc_jdi6_panel_disable(struct drm_panel *panel)
 
 static int xp_xc_jdi6_panel_off(struct xp_xc_jdi6_panel *xp_xc_jdi6_panel)
 {
-	struct device *dev = &xp_xc_jdi6_panel->dsi->dev;
+	struct mipi_dsi_device *dsi = xp_xc_jdi6_panel->dsi;
+	struct device *dev = &dsi->dev;
 	ssize_t wr_sz = 0;
 	int rc;
 
 	xp_xc_jdi6_panel->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
 
-	rc = mipi_dsi_dcs_set_display_off(xp_xc_jdi6_panel->dsi);
-	if (rc < 0)
+	rc = mipi_dsi_dcs_set_display_off(dsi);
+	if (rc < 0) {
 		dev_err(dev, "Cannot set display off: %d\n", rc);
+		return rc;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_unk1, sizeof(cmd_unk1));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send OFF command 1: %ld\n", wr_sz);
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_mcap_off,
+					sizeof(cmd_mcap_off));
+	if (wr_sz < 0) {
+		dev_err(dev, "Cannot send mcap-off command: %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_unk2, sizeof(cmd_unk2));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send OFF command 2: %ld\n", wr_sz);
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_nvm_reload_off,
+					sizeof(cmd_nvm_reload_off));
+	if (wr_sz < 0) {
+		dev_err(dev, "Cannot send nvm-off command : %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_off_unk4, sizeof(cmd_off_unk4));
-	if (wr_sz < 0)
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_off_unk4,
+					sizeof(cmd_off_unk4));
+	if (wr_sz < 0) {
 		dev_err(dev, "Cannot send OFF command 4: %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	wr_sz = mipi_dsi_generic_write(xp_xc_jdi6_panel->dsi,
-					cmd_unk5, sizeof(cmd_unk5));
-	if (wr_sz < 0)
-		dev_err(dev, "Cannot send OFF command 5: %ld\n", wr_sz);
+	wr_sz = mipi_dsi_generic_write(dsi, cmd_mcap_lock,
+					sizeof(cmd_mcap_lock));
+	if (wr_sz < 0) {
+		dev_err(dev, "Cannot send mcap-lock command: %ld\n", wr_sz);
+		return (int)wr_sz;
+	}
 
-	rc = mipi_dsi_dcs_enter_sleep_mode(xp_xc_jdi6_panel->dsi);
-	if (rc < 0)
+	rc = mipi_dsi_dcs_enter_sleep_mode(dsi);
+	if (rc < 0) {
 		dev_err(dev, "Cannot enter sleep mode: %d\n", rc);
+		return rc;
+	}
 
 	msleep(100);
 
@@ -356,9 +386,9 @@ static const struct drm_display_mode default_mode = {
 	.hsync_end = 720 + 20 + 8,
 	.htotal = 720 + 20 + 8 + 8,
 	.vdisplay = 1280,
-	.vsync_start = 1280 + 2000,
-	.vsync_end = 1280 + 2000 + 8,
-	.vtotal = 1280 + 2000 + 8 + 8,
+	.vsync_start = 1280 + 867,
+	.vsync_end = 1280 + 867 + 8,
+	.vtotal = 1280 + 867 + 8 + 8,
 	.vrefresh = 60,
 };
 
