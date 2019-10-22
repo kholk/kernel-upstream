@@ -44,8 +44,14 @@ struct lg_lh497wf2_panel {
 	const struct drm_display_mode *mode;
 };
 
-static const u8 cmd_on_unk1[2] = {0xb0, 0x04};
-static const u8 cmd_on_unk2[2] = {0xd6, 0x01};
+#define R69006_GEN_SET_MCAP		0xb0
+#define MCAP_OFF			0x04	/* Unlock all */
+
+#define R69006_GEN_CTRL_NVM		0xd6
+#define NVM_RELOAD_OFF			0x01
+
+static const u8 cmd_mcap_off[2] = {R69006_GEN_SET_MCAP, MCAP_OFF};
+static const u8 cmd_on_unk2[2] = {R69006_GEN_CTRL_NVM, NVM_RELOAD_OFF};
 
 static const u8 cmd_on_unk3[32] =
 	{
@@ -88,7 +94,7 @@ static int lg_lh497wf2_panel_init(struct lg_lh497wf2_panel *lgd_panel)
 	lgd_panel->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
 	wr_sz = mipi_dsi_generic_write(lgd_panel->dsi,
-					cmd_on_unk1, sizeof(cmd_on_unk1));
+					cmd_mcap_off, sizeof(cmd_mcap_off));
 	if (wr_sz < 0)
 		dev_err(dev, "Cannot send ON command 1: %ld\n", wr_sz);
 
@@ -122,6 +128,8 @@ static int lg_lh497wf2_panel_on(struct lg_lh497wf2_panel *lgd_panel)
 {
 	struct device *dev = &lgd_panel->dsi->dev;
 	int rc = 0;
+
+	lgd_panel->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
 	rc = mipi_dsi_dcs_set_display_on(lgd_panel->dsi);
 	if (rc < 0) {
