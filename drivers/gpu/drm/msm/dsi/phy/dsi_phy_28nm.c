@@ -156,7 +156,7 @@ const struct msm_dsi_phy_cfg dsi_phy_28nm_hpm_famb_cfgs = {
 		.disable = dsi_28nm_phy_disable,
 		.init = msm_dsi_phy_init_common,
 	},
-	.io_start = { 0x1a94400, 0x1a94800 },
+	.io_start = { 0x1a94400, 0x1a96400 },
 	.num_dsi_phy = 2,
 };
 
