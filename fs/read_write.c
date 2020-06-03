@@ -419,6 +419,13 @@ static ssize_t new_sync_read(struct file *filp, char __user *buf, size_t len, lo
 	return ret;
 }
 
+static void warn_unsupported(struct file *file, const char *op)
+{
+	pr_warn_ratelimited(
+		"kernel %s not supported for file %pD4 (pid: %d comm: %.20s)\n",
+		op, file, current->pid, current->comm);
+}
+
 ssize_t __kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 {
 	ssize_t ret;
@@ -430,13 +437,7 @@ ssize_t __kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 
 	if (count > MAX_RW_COUNT)
 		count =  MAX_RW_COUNT;
-	if (file->f_op->read) {
-		mm_segment_t old_fs = get_fs();
-
-		set_fs(KERNEL_DS);
-		ret = file->f_op->read(file, (void __user *)buf, count, pos);
-		set_fs(old_fs);
-	} else if (file->f_op->read_iter) {
+	if (file->f_op->read_iter) {
 		struct kvec iov = { .iov_base = buf, .iov_len = count };
 		struct kiocb kiocb;
 		struct iov_iter iter;
@@ -447,6 +448,8 @@ ssize_t __kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 		ret = file->f_op->read_iter(&kiocb, &iter);
 		*pos = kiocb.ki_pos;
 	} else {
+		if (file->f_op->read)
+			warn_unsupported(file, "read");
 		ret = -EINVAL;
 	}
 	if (ret > 0) {
@@ -530,14 +533,7 @@ ssize_t __kernel_write(struct file *file, const void *buf, size_t count,
 
 	if (count > MAX_RW_COUNT)
 		count =  MAX_RW_COUNT;
-	if (file->f_op->write) {
-		mm_segment_t old_fs = get_fs();
-
-		set_fs(KERNEL_DS);
-		ret = file->f_op->write(file, (__force const char __user *)buf,
-				count, pos);
-		set_fs(old_fs);
-	} else if (file->f_op->write_iter) {
+	if (file->f_op->write_iter) {
 		struct kvec iov = { .iov_base = (void *)buf, .iov_len = count };
 		struct kiocb kiocb;
 		struct iov_iter iter;
@@ -549,6 +545,8 @@ ssize_t __kernel_write(struct file *file, const void *buf, size_t count,
 		if (ret > 0)
 			*pos = kiocb.ki_pos;
 	} else {
+		if (file->f_op->write)
+			warn_unsupported(file, "write");
 		ret = -EINVAL;
 	}
 	if (ret > 0) {
