@@ -597,7 +597,7 @@ static int i8k_open_fs(struct inode *inode, struct file *file)
 
 static const struct proc_ops i8k_proc_ops = {
 	.proc_open	= i8k_open_fs,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
 	.proc_ioctl	= i8k_ioctl,

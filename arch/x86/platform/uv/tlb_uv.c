@@ -1670,7 +1670,7 @@ static int tunables_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops uv_ptc_proc_ops = {
 	.proc_open	= ptc_proc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= ptc_proc_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,

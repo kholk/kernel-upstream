@@ -86,7 +86,7 @@ static int proc_scsi_host_open(struct inode *inode, struct file *file)
 static const struct proc_ops proc_scsi_ops = {
 	.proc_open	= proc_scsi_host_open,
 	.proc_release	= single_release,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= proc_scsi_host_write
 };
@@ -438,7 +438,7 @@ static int proc_scsi_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops scsi_scsi_proc_ops = {
 	.proc_open	= proc_scsi_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= proc_scsi_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,

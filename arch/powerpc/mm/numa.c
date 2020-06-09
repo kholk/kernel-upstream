@@ -1672,7 +1672,7 @@ static ssize_t topology_write(struct file *file, const char __user *buf,
 }
 
 static const struct proc_ops topology_proc_ops = {
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= topology_write,
 	.proc_open	= topology_open,
 	.proc_release	= single_release,

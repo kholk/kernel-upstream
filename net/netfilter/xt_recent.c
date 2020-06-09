@@ -618,7 +618,7 @@ recent_mt_proc_write(struct file *file, const char __user *input,
 
 static const struct proc_ops recent_mt_proc_ops = {
 	.proc_open	= recent_seq_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= recent_mt_proc_write,
 	.proc_release	= seq_release_private,
 	.proc_lseek	= seq_lseek,

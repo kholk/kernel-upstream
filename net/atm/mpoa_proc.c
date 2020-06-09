@@ -55,7 +55,7 @@ static int parse_qos(const char *buff);
 
 static const struct proc_ops mpc_proc_ops = {
 	.proc_open	= proc_mpc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= proc_mpc_write,
 	.proc_release	= seq_release,

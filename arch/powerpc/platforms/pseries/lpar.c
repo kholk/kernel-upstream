@@ -584,7 +584,7 @@ static int vcpudispatch_stats_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops vcpudispatch_stats_proc_ops = {
 	.proc_open	= vcpudispatch_stats_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= vcpudispatch_stats_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
@@ -628,7 +628,7 @@ static int vcpudispatch_stats_freq_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops vcpudispatch_stats_freq_proc_ops = {
 	.proc_open	= vcpudispatch_stats_freq_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= vcpudispatch_stats_freq_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,

@@ -161,7 +161,7 @@ static int poweron_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops ppc_rtas_poweron_proc_ops = {
 	.proc_open	= poweron_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= ppc_rtas_poweron_write,
 	.proc_release	= single_release,
@@ -174,7 +174,7 @@ static int progress_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops ppc_rtas_progress_proc_ops = {
 	.proc_open	= progress_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= ppc_rtas_progress_write,
 	.proc_release	= single_release,
@@ -187,7 +187,7 @@ static int clock_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops ppc_rtas_clock_proc_ops = {
 	.proc_open	= clock_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= ppc_rtas_clock_write,
 	.proc_release	= single_release,
@@ -200,7 +200,7 @@ static int tone_freq_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops ppc_rtas_tone_freq_proc_ops = {
 	.proc_open	= tone_freq_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= ppc_rtas_tone_freq_write,
 	.proc_release	= single_release,
@@ -213,7 +213,7 @@ static int tone_volume_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops ppc_rtas_tone_volume_proc_ops = {
 	.proc_open	= tone_volume_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= ppc_rtas_tone_volume_write,
 	.proc_release	= single_release,

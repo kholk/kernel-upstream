@@ -1584,7 +1584,7 @@ static int slabinfo_open(struct inode *inode, struct file *file)
 static const struct proc_ops slabinfo_proc_ops = {
 	.proc_flags	= PROC_ENTRY_PERMANENT,
 	.proc_open	= slabinfo_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= slabinfo_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,
