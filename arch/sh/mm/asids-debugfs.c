@@ -56,7 +56,7 @@ static int asids_debugfs_open(struct inode *inode, struct file *file)
 static const struct file_operations asids_debugfs_fops = {
 	.owner		= THIS_MODULE,
 	.open		= asids_debugfs_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

@@ -47,7 +47,7 @@ qla2x00_dfs_tgt_sess_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dfs_tgt_sess_ops = {
 	.open		= qla2x00_dfs_tgt_sess_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -116,7 +116,7 @@ qla2x00_dfs_tgt_port_database_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dfs_tgt_port_database_ops = {
 	.open		= qla2x00_dfs_tgt_port_database_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -164,7 +164,7 @@ qla_dfs_fw_resource_cnt_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dfs_fw_resource_cnt_ops = {
 	.open           = qla_dfs_fw_resource_cnt_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = single_release,
 };
@@ -254,7 +254,7 @@ qla_dfs_tgt_counters_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dfs_tgt_counters_ops = {
 	.open           = qla_dfs_tgt_counters_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = single_release,
 };
@@ -351,7 +351,7 @@ out:
 
 static const struct file_operations dfs_fce_ops = {
 	.open		= qla2x00_dfs_fce_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= qla2x00_dfs_fce_release,
 };
@@ -424,7 +424,7 @@ out_free:
 
 static const struct file_operations dfs_naqp_ops = {
 	.open		= qla_dfs_naqp_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 	.write		= qla_dfs_naqp_write,

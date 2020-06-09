@@ -1834,7 +1834,7 @@ out:
 static const struct file_operations kmemleak_fops = {
 	.owner		= THIS_MODULE,
 	.open		= kmemleak_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= kmemleak_write,
 	.llseek		= seq_lseek,
 	.release	= seq_release,

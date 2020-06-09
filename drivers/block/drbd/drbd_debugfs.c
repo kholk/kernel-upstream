@@ -457,7 +457,7 @@ static int in_flight_summary_release(struct inode *inode, struct file *file)
 static const struct file_operations in_flight_summary_fops = {
 	.owner		= THIS_MODULE,
 	.open		= in_flight_summary_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= in_flight_summary_release,
 };
@@ -565,7 +565,7 @@ static int callback_history_release(struct inode *inode, struct file *file)
 static const struct file_operations connection_callback_history_fops = {
 	.owner		= THIS_MODULE,
 	.open		= callback_history_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= callback_history_release,
 };
@@ -612,7 +612,7 @@ static int connection_oldest_requests_release(struct inode *inode, struct file *
 static const struct file_operations connection_oldest_requests_fops = {
 	.owner		= THIS_MODULE,
 	.open		= connection_oldest_requests_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= connection_oldest_requests_release,
 };
@@ -757,7 +757,7 @@ static int device_ ## name ## _release(struct inode *inode, struct file *file)	\
 static const struct file_operations device_ ## name ## _fops = {		\
 	.owner		= THIS_MODULE,						\
 	.open		= device_ ## name ## _open,				\
-	.read		= seq_read,						\
+	.read_iter		= seq_read_iter,						\
 	.llseek		= seq_lseek,						\
 	.release	= device_ ## name ## _release,				\
 };
@@ -859,7 +859,7 @@ static const struct file_operations drbd_version_fops = {
 	.owner = THIS_MODULE,
 	.open = drbd_version_open,
 	.llseek = seq_lseek,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.release = single_release,
 };
 

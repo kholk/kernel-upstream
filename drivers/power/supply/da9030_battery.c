@@ -179,7 +179,7 @@ static int debug_open(struct inode *inode, struct file *file)
 
 static const struct file_operations bat_debug_fops = {
 	.open		= debug_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

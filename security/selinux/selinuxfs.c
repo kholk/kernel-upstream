@@ -1598,7 +1598,7 @@ static int sel_open_avc_cache_stats(struct inode *inode, struct file *file)
 
 static const struct file_operations sel_avc_cache_stats_ops = {
 	.open		= sel_open_avc_cache_stats,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };

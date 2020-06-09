@@ -124,7 +124,7 @@ struct qedi_debugfs_ops {
 { \
 	.owner = THIS_MODULE, \
 	.open = drv##_dbg_##ops##_open, \
-	.read = seq_read, \
+	.read_iter = seq_read_iter, \
 	.llseek = seq_lseek, \
 	.release = single_release, \
 }

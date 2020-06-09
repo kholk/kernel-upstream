@@ -1256,7 +1256,7 @@ static const struct file_operations __prefix ## _fops = {		\
 	.owner = THIS_MODULE,						\
 	.open = __prefix ## _open,					\
 	.release = single_release,					\
-	.read = seq_read,						\
+	.read_iter = seq_read_iter,						\
 	.llseek = seq_lseek,						\
 }
 
@@ -1283,7 +1283,7 @@ static int _dpu_crtc_init_debugfs(struct drm_crtc *crtc)
 
 	static const struct file_operations debugfs_status_fops = {
 		.open =		_dpu_debugfs_status_open,
-		.read =		seq_read,
+		.read_iter =		seq_read_iter,
 		.llseek =	seq_lseek,
 		.release =	single_release,
 	};

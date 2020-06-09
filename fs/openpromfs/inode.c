@@ -159,7 +159,7 @@ static int property_open(struct inode *inode, struct file *file)
 
 static const struct file_operations openpromfs_prop_ops = {
 	.open		= property_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };

@@ -81,7 +81,7 @@ mt7601u_ampdu_stat_open(struct inode *inode, struct file *f)
 
 static const struct file_operations fops_ampdu_stat = {
 	.open = mt7601u_ampdu_stat_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -139,7 +139,7 @@ mt7601u_eeprom_param_open(struct inode *inode, struct file *f)
 
 static const struct file_operations fops_eeprom_param = {
 	.open = mt7601u_eeprom_param_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

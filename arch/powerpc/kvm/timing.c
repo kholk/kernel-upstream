@@ -198,7 +198,7 @@ static int kvmppc_exit_timing_open(struct inode *inode, struct file *file)
 static const struct file_operations kvmppc_exit_timing_fops = {
 	.owner   = THIS_MODULE,
 	.open    = kvmppc_exit_timing_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.write   = kvmppc_exit_timing_write,
 	.llseek  = seq_lseek,
 	.release = single_release,

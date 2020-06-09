@@ -706,7 +706,7 @@ static int telem_pss_trc_verb_open(struct inode *inode, struct file *file)
 
 static const struct file_operations telem_pss_trc_verb_ops = {
 	.open		= telem_pss_trc_verb_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= telem_pss_trc_verb_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,
@@ -754,7 +754,7 @@ static int telem_ioss_trc_verb_open(struct inode *inode, struct file *file)
 
 static const struct file_operations telem_ioss_trc_verb_ops = {
 	.open		= telem_ioss_trc_verb_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= telem_ioss_trc_verb_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,

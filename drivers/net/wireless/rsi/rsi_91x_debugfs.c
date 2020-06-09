@@ -253,14 +253,14 @@ static ssize_t rsi_debug_zone_write(struct file *filp,
 #define FOPS(fopen) { \
 	.owner = THIS_MODULE, \
 	.open = (fopen), \
-	.read = seq_read, \
+	.read_iter = seq_read_iter, \
 	.llseek = seq_lseek, \
 }
 
 #define FOPS_RW(fopen, fwrite) { \
 	.owner = THIS_MODULE, \
 	.open = (fopen), \
-	.read = seq_read, \
+	.read_iter = seq_read_iter, \
 	.llseek = seq_lseek, \
 	.write = (fwrite), \
 }

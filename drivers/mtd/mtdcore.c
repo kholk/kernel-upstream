@@ -351,7 +351,7 @@ static int mtd_partid_debugfs_open(struct inode *inode, struct file *file)
 
 static const struct file_operations mtd_partid_debug_fops = {
 	.open           = mtd_partid_debugfs_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = single_release,
 };
@@ -372,7 +372,7 @@ static int mtd_partname_debugfs_open(struct inode *inode, struct file *file)
 
 static const struct file_operations mtd_partname_debug_fops = {
 	.open           = mtd_partname_debugfs_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = single_release,
 };

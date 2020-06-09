@@ -269,7 +269,7 @@ static int tracing_stat_release(struct inode *i, struct file *f)
 
 static const struct file_operations tracing_stat_fops = {
 	.open		= tracing_stat_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= tracing_stat_release
 };

@@ -76,7 +76,7 @@ static int rtw_debugfs_close(struct inode *inode, struct file *filp)
 static const struct file_operations file_ops_single_r = {
 	.owner = THIS_MODULE,
 	.open = rtw_debugfs_single_open_rw,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -85,7 +85,7 @@ static const struct file_operations file_ops_single_rw = {
 	.owner = THIS_MODULE,
 	.open = rtw_debugfs_single_open_rw,
 	.release = single_release,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.write = rtw_debugfs_single_write,
 };

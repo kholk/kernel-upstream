@@ -457,7 +457,7 @@ static int ide_media_proc_open(struct inode *inode, struct file *file)
 static const struct file_operations ide_media_proc_fops = {
 	.owner		= THIS_MODULE,
 	.open		= ide_media_proc_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

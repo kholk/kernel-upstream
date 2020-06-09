@@ -870,7 +870,7 @@ static int ddebug_proc_open(struct inode *inode, struct file *file)
 static const struct file_operations ddebug_proc_fops = {
 	.owner = THIS_MODULE,
 	.open = ddebug_proc_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release_private,
 	.write = ddebug_proc_write

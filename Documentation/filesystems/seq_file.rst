@@ -311,7 +311,7 @@ file_operations structure will look like::
 	static const struct file_operations ct_file_ops = {
 	        .owner   = THIS_MODULE,
 	        .open    = ct_open,
-	        .read    = seq_read,
+	        .read_iter    = seq_read_iter,
 	        .llseek  = seq_lseek,
 	        .release = seq_release
 	};

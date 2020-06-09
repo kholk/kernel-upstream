@@ -900,7 +900,7 @@ static const struct file_operations vga_switcheroo_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.open = vga_switcheroo_debugfs_open,
 	.write = vga_switcheroo_debugfs_write,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

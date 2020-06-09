@@ -303,7 +303,7 @@ static const struct file_operations cmd_db_debugfs_ops = {
 #ifdef CONFIG_DEBUG_FS
 	.open = open_cmd_db_debugfs,
 #endif
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

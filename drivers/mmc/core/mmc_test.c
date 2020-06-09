@@ -3148,7 +3148,7 @@ static ssize_t mtf_test_write(struct file *file, const char __user *buf,
 
 static const struct file_operations mmc_test_fops_test = {
 	.open		= mtf_test_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= mtf_test_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,

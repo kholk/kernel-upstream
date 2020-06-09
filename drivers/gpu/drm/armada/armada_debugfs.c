@@ -85,7 +85,7 @@ static int armada_debugfs_crtc_reg_write(struct file *file,
 static const struct file_operations armada_debugfs_crtc_reg_fops = {
 	.owner = THIS_MODULE,
 	.open = armada_debugfs_crtc_reg_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = armada_debugfs_crtc_reg_write,
 	.llseek = seq_lseek,
 	.release = single_release,

@@ -271,7 +271,7 @@ static int mtu3_ep_open(struct inode *inode, struct file *file)
 
 static const struct file_operations mtu3_ep_fops = {
 	.open = mtu3_ep_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -341,7 +341,7 @@ static ssize_t mtu3_probe_write(struct file *file, const char __user *ubuf,
 static const struct file_operations mtu3_probe_fops = {
 	.open = mtu3_probe_open,
 	.write = mtu3_probe_write,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -467,7 +467,7 @@ static ssize_t ssusb_mode_write(struct file *file, const char __user *ubuf,
 static const struct file_operations ssusb_mode_fops = {
 	.open = ssusb_mode_open,
 	.write = ssusb_mode_write,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -513,7 +513,7 @@ static ssize_t ssusb_vbus_write(struct file *file, const char __user *ubuf,
 static const struct file_operations ssusb_vbus_fops = {
 	.open = ssusb_vbus_open,
 	.write = ssusb_vbus_write,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

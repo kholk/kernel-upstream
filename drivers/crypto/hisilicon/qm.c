@@ -1054,7 +1054,7 @@ static int qm_regs_open(struct inode *inode, struct file *file)
 static const struct file_operations qm_regs_fops = {
 	.owner = THIS_MODULE,
 	.open = qm_regs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.release = single_release,
 };
 

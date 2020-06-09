@@ -196,7 +196,7 @@ static int debug_seq_open(struct inode *inode, struct file *file)
 static const struct file_operations debug_ops = {
 	.owner		= THIS_MODULE,
 	.open		= debug_seq_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.release	= single_release
 };
 

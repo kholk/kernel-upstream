@@ -1148,7 +1148,7 @@ static ssize_t probes_write(struct file *file, const char __user *buffer,
 static const struct file_operations kprobe_events_ops = {
 	.owner          = THIS_MODULE,
 	.open           = probes_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = seq_release,
 	.write		= probes_write,
@@ -1193,7 +1193,7 @@ static int profile_open(struct inode *inode, struct file *file)
 static const struct file_operations kprobe_profile_ops = {
 	.owner          = THIS_MODULE,
 	.open           = profile_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = seq_release,
 };

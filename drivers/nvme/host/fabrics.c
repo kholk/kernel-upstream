@@ -1140,7 +1140,7 @@ static int nvmf_dev_release(struct inode *inode, struct file *file)
 static const struct file_operations nvmf_dev_fops = {
 	.owner		= THIS_MODULE,
 	.write		= nvmf_dev_write,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.open		= nvmf_dev_open,
 	.release	= nvmf_dev_release,
 };

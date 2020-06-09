@@ -80,7 +80,7 @@ void hsr_debugfs_rename(struct net_device *dev)
 
 static const struct file_operations hsr_fops = {
 	.open	= hsr_node_table_open,
-	.read	= seq_read,
+	.read_iter	= seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

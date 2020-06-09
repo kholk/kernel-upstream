@@ -1086,7 +1086,7 @@ static int debugfs_open_regset32(struct inode *inode, struct file *file)
 
 static const struct file_operations fops_regset32 = {
 	.open =		debugfs_open_regset32,
-	.read =		seq_read,
+	.read_iter =		seq_read_iter,
 	.llseek =	seq_lseek,
 	.release =	single_release,
 };
@@ -1132,7 +1132,7 @@ static const struct file_operations debugfs_devm_entry_ops = {
 	.owner = THIS_MODULE,
 	.open = debugfs_devm_entry_open,
 	.release = single_release,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek
 };
 

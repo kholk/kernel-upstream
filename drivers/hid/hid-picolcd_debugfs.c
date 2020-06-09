@@ -60,7 +60,7 @@ static ssize_t picolcd_debug_reset_write(struct file *f, const char __user *user
 static const struct file_operations picolcd_debug_reset_fops = {
 	.owner    = THIS_MODULE,
 	.open     = picolcd_debug_reset_open,
-	.read     = seq_read,
+	.read_iter     = seq_read_iter,
 	.llseek   = seq_lseek,
 	.write    = picolcd_debug_reset_write,
 	.release  = single_release,

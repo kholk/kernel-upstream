@@ -1943,7 +1943,7 @@ static int spufs_caps_open(struct inode *inode, struct file *file)
 
 static const struct file_operations spufs_caps_fops = {
 	.open		= spufs_caps_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -2189,7 +2189,7 @@ static int spufs_tid_open(struct inode *inode, struct file *file)
 
 static const struct file_operations spufs_tid_fops = {
 	.open		= spufs_tid_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -2279,7 +2279,7 @@ static int spufs_stat_open(struct inode *inode, struct file *file)
 
 static const struct file_operations spufs_stat_fops = {
 	.open		= spufs_stat_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -2532,7 +2532,7 @@ static int spufs_ctx_open(struct inode *inode, struct file *file)
 
 static const struct file_operations spufs_ctx_fops = {
 	.open           = spufs_ctx_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = single_release,
 };

@@ -152,7 +152,7 @@ static int xenvif_io_ring_open(struct inode *inode, struct file *filp)
 static const struct file_operations xenvif_dbg_io_ring_ops_fops = {
 	.owner = THIS_MODULE,
 	.open = xenvif_io_ring_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.write = xenvif_write_io_ring,

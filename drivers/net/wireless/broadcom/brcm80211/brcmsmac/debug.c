@@ -182,7 +182,7 @@ static const struct file_operations brcms_debugfs_def_ops = {
 	.owner = THIS_MODULE,
 	.open = brcms_debugfs_entry_open,
 	.release = single_release,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek
 };
 

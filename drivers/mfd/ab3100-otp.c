@@ -117,7 +117,7 @@ static int ab3100_otp_open(struct inode *inode, struct file *file)
 
 static const struct file_operations ab3100_otp_operations = {
 	.open		= ab3100_otp_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

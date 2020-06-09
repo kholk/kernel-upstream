@@ -316,7 +316,7 @@ event_trigger_release(struct inode *inode, struct file *file)
 
 const struct file_operations event_trigger_fops = {
 	.open = event_trigger_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = event_trigger_write,
 	.llseek = tracing_lseek,
 	.release = event_trigger_release,

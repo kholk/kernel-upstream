@@ -957,7 +957,7 @@ static int wil_pmcring_seq_open(struct inode *inode, struct file *file)
 static const struct file_operations fops_pmcring = {
 	.open		= wil_pmcring_seq_open,
 	.release	= single_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 };
 
@@ -1833,7 +1833,7 @@ static ssize_t wil_tx_latency_write(struct file *file, const char __user *buf,
 static const struct file_operations fops_tx_latency = {
 	.open		= wil_tx_latency_seq_open,
 	.release	= single_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= wil_tx_latency_write,
 	.llseek		= seq_lseek,
 };
@@ -1996,7 +1996,7 @@ static ssize_t wil_link_stats_write(struct file *file, const char __user *buf,
 static const struct file_operations fops_link_stats = {
 	.open		= wil_link_stats_seq_open,
 	.release	= single_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= wil_link_stats_write,
 	.llseek		= seq_lseek,
 };
@@ -2050,7 +2050,7 @@ wil_link_stats_global_write(struct file *file, const char __user *buf,
 static const struct file_operations fops_link_stats_global = {
 	.open		= wil_link_stats_global_seq_open,
 	.release	= single_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= wil_link_stats_global_write,
 	.llseek		= seq_lseek,
 };
@@ -2187,7 +2187,7 @@ static int wil_fw_capabilities_seq_open(struct inode *inode, struct file *file)
 static const struct file_operations fops_fw_capabilities = {
 	.open		= wil_fw_capabilities_seq_open,
 	.release	= single_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 };
 
@@ -2213,7 +2213,7 @@ static int wil_fw_version_seq_open(struct inode *inode, struct file *file)
 static const struct file_operations fops_fw_version = {
 	.open		= wil_fw_version_seq_open,
 	.release	= single_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 };
 
@@ -2326,7 +2326,7 @@ wil_compressed_rx_status_seq_open(struct inode *inode, struct file *file)
 static const struct file_operations fops_compressed_rx_status = {
 	.open  = wil_compressed_rx_status_seq_open,
 	.release = single_release,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = wil_compressed_rx_status_write,
 	.llseek	= seq_lseek,
 };

@@ -2364,7 +2364,7 @@ static int client_info_open(struct inode *inode, struct file *file)
 
 static const struct file_operations client_info_fops = {
 	.open		= client_info_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -2611,7 +2611,7 @@ static int client_opens_release(struct inode *inode, struct file *file)
 
 static const struct file_operations client_states_fops = {
 	.open		= client_states_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= client_opens_release,
 };

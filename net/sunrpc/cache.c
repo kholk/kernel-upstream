@@ -1842,7 +1842,7 @@ static int content_release_pipefs(struct inode *inode, struct file *filp)
 
 const struct file_operations content_file_operations_pipefs = {
 	.open		= content_open_pipefs,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= content_release_pipefs,
 };

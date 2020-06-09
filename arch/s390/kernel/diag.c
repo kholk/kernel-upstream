@@ -111,7 +111,7 @@ static int show_diag_stat_open(struct inode *inode, struct file *file)
 
 static const struct file_operations show_diag_stat_fops = {
 	.open		= show_diag_stat_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };

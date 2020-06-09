@@ -1030,7 +1030,7 @@ static int debug_stats_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations debug_stats_fops = {
 	.open		= debug_stats_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

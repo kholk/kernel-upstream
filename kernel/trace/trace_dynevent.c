@@ -197,7 +197,7 @@ static ssize_t dyn_event_write(struct file *file, const char __user *buffer,
 static const struct file_operations dynamic_events_ops = {
 	.owner          = THIS_MODULE,
 	.open           = dyn_event_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = seq_release,
 	.write		= dyn_event_write,

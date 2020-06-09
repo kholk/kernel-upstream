@@ -281,7 +281,7 @@ static int qperf_seq_open(struct inode *inode, struct file *filp)
 static const struct file_operations debugfs_perf_fops = {
 	.owner	 = THIS_MODULE,
 	.open	 = qperf_seq_open,
-	.read	 = seq_read,
+	.read_iter	 = seq_read_iter,
 	.write	 = qperf_seq_write,
 	.llseek  = seq_lseek,
 	.release = single_release,

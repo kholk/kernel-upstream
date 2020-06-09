@@ -2634,7 +2634,7 @@ static int tegra_pcie_ports_open(struct inode *inode, struct file *file)
 static const struct file_operations tegra_pcie_ports_ops = {
 	.owner = THIS_MODULE,
 	.open = tegra_pcie_ports_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };

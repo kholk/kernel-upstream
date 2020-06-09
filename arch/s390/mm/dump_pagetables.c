@@ -268,7 +268,7 @@ static int ptdump_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations ptdump_fops = {
 	.open		= ptdump_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

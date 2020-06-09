@@ -136,7 +136,7 @@ In particular, some very common ones you will notice are:
         static const struct file_operations uprobe_events_ops = {
                 .owner          = THIS_MODULE,
                 .open           = probes_open,
-                .read           = seq_read,
+                .read_iter           = seq_read_iter,
                 .llseek         = seq_lseek,
                 .release        = seq_release,
                 .write          = probes_write,
@@ -147,7 +147,7 @@ In particular, some very common ones you will notice are:
         static const struct file_operations uprobe_events_ops = {
                 .owner = THIS_MODULE,
                 .open = probes_open,
-                .read = seq_read,
+                .read_iter = seq_read_iter,
                 .llseek = seq_lseek,
                 .release = seq_release,
                 .write = probes_write,

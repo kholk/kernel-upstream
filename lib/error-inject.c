@@ -208,7 +208,7 @@ static int ei_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations debugfs_ei_ops = {
 	.open           = ei_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = seq_release,
 };
