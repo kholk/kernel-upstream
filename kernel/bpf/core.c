@@ -82,7 +82,7 @@ struct bpf_prog *bpf_prog_alloc_no_stats(unsigned int size, gfp_t gfp_extra_flag
 	struct bpf_prog *fp;
 
 	size = round_up(size, PAGE_SIZE);
-	fp = __vmalloc(size, gfp_flags, PAGE_KERNEL);
+	fp = __vmalloc(size, gfp_flags);
 	if (fp == NULL)
 		return NULL;
 
@@ -232,7 +232,7 @@ struct bpf_prog *bpf_prog_realloc(struct bpf_prog *fp_old, unsigned int size,
 	if (ret)
 		return NULL;
 
-	fp = __vmalloc(size, gfp_flags, PAGE_KERNEL);
+	fp = __vmalloc(size, gfp_flags);
 	if (fp == NULL) {
 		__bpf_prog_uncharge(fp_old->aux->user, delta);
 	} else {
@@ -646,7 +646,7 @@ static bool bpf_prog_kallsyms_verify_off(const struct bpf_prog *fp)
 void bpf_prog_kallsyms_add(struct bpf_prog *fp)
 {
 	if (!bpf_prog_kallsyms_candidate(fp) ||
-	    !capable(CAP_SYS_ADMIN))
+	    !bpf_capable())
 		return;
 
 	bpf_prog_ksym_set_addr(fp);
@@ -1089,7 +1089,7 @@ static struct bpf_prog *bpf_prog_clone_create(struct bpf_prog *fp_other,
 	gfp_t gfp_flags = GFP_KERNEL | __GFP_ZERO | gfp_extra_flags;
 	struct bpf_prog *fp;
 
-	fp = __vmalloc(fp_other->pages * PAGE_SIZE, gfp_flags, PAGE_KERNEL);
+	fp = __vmalloc(fp_other->pages * PAGE_SIZE, gfp_flags);
 	if (fp != NULL) {
 		/* aux->prog still points to the fp_other one, so
 		 * when promoting the clone to the real program,
@@ -1543,7 +1543,7 @@ select_insn:
 
 		/* ARG1 at this point is guaranteed to point to CTX from
 		 * the verifier side due to the fact that the tail call is
-		 * handeled like a helper, that is, bpf_tail_call_proto,
+		 * handled like a helper, that is, bpf_tail_call_proto,
 		 * where arg1_type is ARG_PTR_TO_CTX.
 		 */
 		insn = prog->insnsi;
@@ -2136,6 +2136,11 @@ BPF_CALL_0(bpf_user_rnd_u32)
 	return res;
 }
 
+BPF_CALL_0(bpf_get_raw_cpu_id)
+{
+	return raw_smp_processor_id();
+}
+
 /* Weak definitions of helper functions in case we don't have bpf syscall. */
 const struct bpf_func_proto bpf_map_lookup_elem_proto __weak;
 const struct bpf_func_proto bpf_map_update_elem_proto __weak;
@@ -2151,6 +2156,7 @@ const struct bpf_func_proto bpf_get_prandom_u32_proto __weak;
 const struct bpf_func_proto bpf_get_smp_processor_id_proto __weak;
 const struct bpf_func_proto bpf_get_numa_node_id_proto __weak;
 const struct bpf_func_proto bpf_ktime_get_ns_proto __weak;
+const struct bpf_func_proto bpf_ktime_get_boot_ns_proto __weak;
 
 const struct bpf_func_proto bpf_get_current_pid_tgid_proto __weak;
 const struct bpf_func_proto bpf_get_current_uid_gid_proto __weak;
