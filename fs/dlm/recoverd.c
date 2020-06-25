@@ -40,6 +40,7 @@ static int enable_locking(struct dlm_ls *ls, uint64_t seq)
 		/* unblocks processes waiting to enter the dlm */
 		up_write(&ls->ls_in_recovery);
 		clear_bit(LSFL_RECOVER_LOCK, &ls->ls_flags);
+		wake_up(&ls->ls_posix_lock_wait);
 		error = 0;
 	}
 	spin_unlock(&ls->ls_recover_lock);

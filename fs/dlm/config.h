@@ -33,6 +33,7 @@ struct dlm_config_info {
 	int ci_protocol;
 	int ci_timewarn_cs;
 	int ci_waitwarn_us;
+	int ci_waitplock_recovery;
 	int ci_new_rsb_count;
 	int ci_recover_callbacks;
 	char ci_cluster_name[DLM_LOCKSPACE_LEN];

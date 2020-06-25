@@ -605,6 +605,7 @@ static int new_lockspace(const char *name, const char *cluster,
 	}
 
 	init_waitqueue_head(&ls->ls_recover_lock_wait);
+	init_waitqueue_head(&ls->ls_posix_lock_wait);
 
 	/*
 	 * Once started, dlm_recoverd first looks for ls in lslist, then
