@@ -250,7 +250,6 @@ const struct file_operations udf_file_operations = {
 	.write_iter		= udf_file_write_iter,
 	.release		= udf_release_file,
 	.fsync			= generic_file_fsync,
-	.splice_read		= generic_file_splice_read,
 	.llseek			= generic_file_llseek,
 };
 
