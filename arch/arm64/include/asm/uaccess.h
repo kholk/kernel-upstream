@@ -62,8 +62,13 @@ static inline unsigned long __range_ok(const void __user *addr, unsigned long si
 {
 	unsigned long ret, limit = current_thread_info()->addr_limit;
 
+	/*
+	 * Asynchronous I/O running in a kernel thread does not have the
+	 * TIF_TAGGED_ADDR flag of the process owning the mm, so always untag
+	 * the user address before checking.
+	 */
 	if (IS_ENABLED(CONFIG_ARM64_TAGGED_ADDR_ABI) &&
-	    test_thread_flag(TIF_TAGGED_ADDR))
+	    (current->flags & PF_KTHREAD || test_thread_flag(TIF_TAGGED_ADDR)))
 		addr = untagged_addr(addr);
 
 	__chk_user_ptr(addr);
@@ -299,7 +304,7 @@ do {									\
 		__p = uaccess_mask_ptr(__p);				\
 		__raw_get_user((x), __p, (err));			\
 	} else {							\
-		(x) = 0; (err) = -EFAULT;				\
+		(x) = (__force __typeof__(x))0; (err) = -EFAULT;	\
 	}								\
 } while (0)
 

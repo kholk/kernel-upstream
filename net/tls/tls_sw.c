@@ -168,6 +168,9 @@ static void tls_decrypt_done(struct crypto_async_request *req, int err)
 
 	/* Propagate if there was an err */
 	if (err) {
+		if (err == -EBADMSG)
+			TLS_INC_STATS(sock_net(skb->sk),
+				      LINUX_MIB_TLSDECRYPTERROR);
 		ctx->async_wait.err = err;
 		tls_err_abort(skb->sk, err);
 	} else {
@@ -203,10 +206,12 @@ static void tls_decrypt_done(struct crypto_async_request *req, int err)
 
 	kfree(aead_req);
 
+	spin_lock_bh(&ctx->decrypt_compl_lock);
 	pending = atomic_dec_return(&ctx->decrypt_pending);
 
-	if (!pending && READ_ONCE(ctx->async_notify))
+	if (!pending && ctx->async_notify)
 		complete(&ctx->async_wait.completion);
+	spin_unlock_bh(&ctx->decrypt_compl_lock);
 }
 
 static int tls_do_decryption(struct sock *sk,
@@ -464,10 +469,12 @@ static void tls_encrypt_done(struct crypto_async_request *req, int err)
 			ready = true;
 	}
 
+	spin_lock_bh(&ctx->encrypt_compl_lock);
 	pending = atomic_dec_return(&ctx->encrypt_pending);
 
-	if (!pending && READ_ONCE(ctx->async_notify))
+	if (!pending && ctx->async_notify)
 		complete(&ctx->async_wait.completion);
+	spin_unlock_bh(&ctx->encrypt_compl_lock);
 
 	if (!ready)
 		return;
@@ -677,12 +684,32 @@ static int tls_push_record(struct sock *sk, int flags,
 
 	split_point = msg_pl->apply_bytes;
 	split = split_point && split_point < msg_pl->sg.size;
+	if (unlikely((!split &&
+		      msg_pl->sg.size +
+		      prot->overhead_size > msg_en->sg.size) ||
+		     (split &&
+		      split_point +
+		      prot->overhead_size > msg_en->sg.size))) {
+		split = true;
+		split_point = msg_en->sg.size;
+	}
 	if (split) {
 		rc = tls_split_open_record(sk, rec, &tmp, msg_pl, msg_en,
 					   split_point, prot->overhead_size,
 					   &orig_end);
 		if (rc < 0)
 			return rc;
+		/* This can happen if above tls_split_open_record allocates
+		 * a single large encryption buffer instead of two smaller
+		 * ones. In this case adjust pointers and continue without
+		 * split.
+		 */
+		if (!msg_pl->sg.size) {
+			tls_merge_open_record(sk, rec, tmp, orig_end);
+			msg_pl = &rec->msg_plaintext;
+			msg_en = &rec->msg_encrypted;
+			split = false;
+		}
 		sk_msg_trim(sk, msg_en, msg_pl->sg.size +
 			    prot->overhead_size);
 	}
@@ -704,9 +731,14 @@ static int tls_push_record(struct sock *sk, int flags,
 		sg_mark_end(sk_msg_elem(msg_pl, i));
 	}
 
+	if (msg_pl->sg.end < msg_pl->sg.start) {
+		sg_chain(&msg_pl->sg.data[msg_pl->sg.start],
+			 MAX_SKB_FRAGS - msg_pl->sg.start + 1,
+			 msg_pl->sg.data);
+	}
+
 	i = msg_pl->sg.start;
-	sg_chain(rec->sg_aead_in, 2, rec->inplace_crypto ?
-		 &msg_en->sg.data[i] : &msg_pl->sg.data[i]);
+	sg_chain(rec->sg_aead_in, 2, &msg_pl->sg.data[i]);
 
 	i = msg_en->sg.end;
 	sk_msg_iter_var_prev(i);
@@ -752,7 +784,7 @@ static int tls_push_record(struct sock *sk, int flags,
 
 static int bpf_exec_tx_verdict(struct sk_msg *msg, struct sock *sk,
 			       bool full_record, u8 record_type,
-			       size_t *copied, int flags)
+			       ssize_t *copied, int flags)
 {
 	struct tls_context *tls_ctx = tls_get_ctx(sk);
 	struct tls_sw_context_tx *ctx = tls_sw_ctx_tx(tls_ctx);
@@ -766,17 +798,23 @@ static int bpf_exec_tx_verdict(struct sk_msg *msg, struct sock *sk,
 
 	policy = !(flags & MSG_SENDPAGE_NOPOLICY);
 	psock = sk_psock_get(sk);
-	if (!psock || !policy)
-		return tls_push_record(sk, flags, record_type);
+	if (!psock || !policy) {
+		err = tls_push_record(sk, flags, record_type);
+		if (err && sk->sk_err == EBADMSG) {
+			*copied -= sk_msg_free(sk, msg);
+			tls_free_open_rec(sk);
+			err = -sk->sk_err;
+		}
+		if (psock)
+			sk_psock_put(sk, psock);
+		return err;
+	}
 more_data:
 	enospc = sk_msg_full(msg);
 	if (psock->eval == __SK_NONE) {
 		delta = msg->sg.size;
 		psock->eval = sk_psock_msg_verdict(sk, psock, msg);
-		if (delta < msg->sg.size)
-			delta -= msg->sg.size;
-		else
-			delta = 0;
+		delta -= msg->sg.size;
 	}
 	if (msg->cork_bytes && msg->cork_bytes > msg->sg.size &&
 	    !enospc && !full_record) {
@@ -791,9 +829,10 @@ more_data:
 	switch (psock->eval) {
 	case __SK_PASS:
 		err = tls_push_record(sk, flags, record_type);
-		if (err < 0) {
+		if (err && sk->sk_err == EBADMSG) {
 			*copied -= sk_msg_free(sk, msg);
 			tls_free_open_rec(sk);
+			err = -sk->sk_err;
 			goto out_err;
 		}
 		break;
@@ -883,7 +922,8 @@ int tls_sw_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	unsigned char record_type = TLS_RECORD_TYPE_DATA;
 	bool is_kvec = iov_iter_is_kvec(&msg->msg_iter);
 	bool eor = !(msg->msg_flags & MSG_MORE);
-	size_t try_to_copy, copied = 0;
+	size_t try_to_copy;
+	ssize_t copied = 0;
 	struct sk_msg *msg_pl, *msg_en;
 	struct tls_rec *rec;
 	int required_size;
@@ -893,9 +933,10 @@ int tls_sw_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	int num_zc = 0;
 	int orig_size;
 	int ret = 0;
+	int pending;
 
 	if (msg->msg_flags & ~(MSG_MORE | MSG_DONTWAIT | MSG_NOSIGNAL))
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	mutex_lock(&tls_ctx->tx_lock);
 	lock_sock(sk);
@@ -965,8 +1006,6 @@ alloc_encrypted:
 			if (ret)
 				goto fallback_to_reg_send;
 
-			rec->inplace_crypto = 0;
-
 			num_zc++;
 			copied += try_to_copy;
 
@@ -979,7 +1018,7 @@ alloc_encrypted:
 					num_async++;
 				else if (ret == -ENOMEM)
 					goto wait_for_memory;
-				else if (ret == -ENOSPC)
+				else if (ctx->open_rec && ret == -ENOSPC)
 					goto rollback_iter;
 				else if (ret != -EAGAIN)
 					goto send_end;
@@ -1048,11 +1087,12 @@ wait_for_memory:
 		ret = sk_stream_wait_memory(sk, &timeo);
 		if (ret) {
 trim_sgl:
-			tls_trim_both_msgs(sk, orig_size);
+			if (ctx->open_rec)
+				tls_trim_both_msgs(sk, orig_size);
 			goto send_end;
 		}
 
-		if (msg_en->sg.size < required_size)
+		if (ctx->open_rec && msg_en->sg.size < required_size)
 			goto alloc_encrypted;
 	}
 
@@ -1060,13 +1100,19 @@ trim_sgl:
 		goto send_end;
 	} else if (num_zc) {
 		/* Wait for pending encryptions to get completed */
-		smp_store_mb(ctx->async_notify, true);
+		spin_lock_bh(&ctx->encrypt_compl_lock);
+		ctx->async_notify = true;
 
-		if (atomic_read(&ctx->encrypt_pending))
+		pending = atomic_read(&ctx->encrypt_pending);
+		spin_unlock_bh(&ctx->encrypt_compl_lock);
+		if (pending)
 			crypto_wait_req(-EINPROGRESS, &ctx->async_wait);
 		else
 			reinit_completion(&ctx->async_wait.completion);
 
+		/* There can be no concurrent accesses, since we have no
+		 * pending encrypt operations
+		 */
 		WRITE_ONCE(ctx->async_notify, false);
 
 		if (ctx->async_wait.err) {
@@ -1086,7 +1132,7 @@ send_end:
 
 	release_sock(sk);
 	mutex_unlock(&tls_ctx->tx_lock);
-	return copied ? copied : ret;
+	return copied > 0 ? copied : ret;
 }
 
 static int tls_sw_do_sendpage(struct sock *sk, struct page *page,
@@ -1100,7 +1146,7 @@ static int tls_sw_do_sendpage(struct sock *sk, struct page *page,
 	struct sk_msg *msg_pl;
 	struct tls_rec *rec;
 	int num_async = 0;
-	size_t copied = 0;
+	ssize_t copied = 0;
 	bool full_record;
 	int record_room;
 	int ret = 0;
@@ -1164,7 +1210,6 @@ alloc_payload:
 
 		tls_ctx->pending_open_record_frags = true;
 		if (full_record || eor || sk_msg_full(msg_pl)) {
-			rec->inplace_crypto = 0;
 			ret = bpf_exec_tx_verdict(msg_pl, sk, full_record,
 						  record_type, &copied, flags);
 			if (ret) {
@@ -1185,11 +1230,13 @@ wait_for_sndbuf:
 wait_for_memory:
 		ret = sk_stream_wait_memory(sk, &timeo);
 		if (ret) {
-			tls_trim_both_msgs(sk, msg_pl->sg.size);
+			if (ctx->open_rec)
+				tls_trim_both_msgs(sk, msg_pl->sg.size);
 			goto sendpage_end;
 		}
 
-		goto alloc_payload;
+		if (ctx->open_rec)
+			goto alloc_payload;
 	}
 
 	if (num_async) {
@@ -1201,7 +1248,7 @@ wait_for_memory:
 	}
 sendpage_end:
 	ret = sk_stream_error(sk, flags, ret);
-	return copied ? copied : ret;
+	return copied > 0 ? copied : ret;
 }
 
 int tls_sw_sendpage_locked(struct sock *sk, struct page *page,
@@ -1210,7 +1257,7 @@ int tls_sw_sendpage_locked(struct sock *sk, struct page *page,
 	if (flags & ~(MSG_MORE | MSG_DONTWAIT | MSG_NOSIGNAL |
 		      MSG_SENDPAGE_NOTLAST | MSG_SENDPAGE_NOPOLICY |
 		      MSG_NO_SHARED_FRAGS))
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	return tls_sw_do_sendpage(sk, page, offset, size, flags);
 }
@@ -1223,7 +1270,7 @@ int tls_sw_sendpage(struct sock *sk, struct page *page,
 
 	if (flags & ~(MSG_MORE | MSG_DONTWAIT | MSG_NOSIGNAL |
 		      MSG_SENDPAGE_NOTLAST | MSG_SENDPAGE_NOPOLICY))
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	mutex_lock(&tls_ctx->tx_lock);
 	lock_sock(sk);
@@ -1492,7 +1539,7 @@ static int decrypt_skb_update(struct sock *sk, struct sk_buff *skb,
 
 	if (!ctx->decrypted) {
 		if (tls_ctx->rx_conf == TLS_HW) {
-			err = tls_device_decrypted(sk, skb);
+			err = tls_device_decrypted(sk, tls_ctx, skb, rxm);
 			if (err < 0)
 				return err;
 		}
@@ -1505,7 +1552,9 @@ static int decrypt_skb_update(struct sock *sk, struct sk_buff *skb,
 				if (err == -EINPROGRESS)
 					tls_advance_record_sn(sk, prot,
 							      &tls_ctx->rx);
-
+				else if (err == -EBADMSG)
+					TLS_INC_STATS(sock_net(sk),
+						      LINUX_MIB_TLSDECRYPTERROR);
 				return err;
 			}
 		} else {
@@ -1520,7 +1569,7 @@ static int decrypt_skb_update(struct sock *sk, struct sk_buff *skb,
 		rxm->offset += prot->prepend_size;
 		rxm->full_len -= prot->overhead_size;
 		tls_advance_record_sn(sk, prot, &tls_ctx->rx);
-		ctx->decrypted = true;
+		ctx->decrypted = 1;
 		ctx->saved_data_ready(sk);
 	} else {
 		*zc = false;
@@ -1694,6 +1743,7 @@ int tls_sw_recvmsg(struct sock *sk,
 	bool is_kvec = iov_iter_is_kvec(&msg->msg_iter);
 	bool is_peek = flags & MSG_PEEK;
 	int num_async = 0;
+	int pending;
 
 	flags |= nonblock;
 
@@ -1856,8 +1906,11 @@ pick_next_record:
 recv_end:
 	if (num_async) {
 		/* Wait for all previously submitted records to be decrypted */
-		smp_store_mb(ctx->async_notify, true);
-		if (atomic_read(&ctx->decrypt_pending)) {
+		spin_lock_bh(&ctx->decrypt_compl_lock);
+		ctx->async_notify = true;
+		pending = atomic_read(&ctx->decrypt_pending);
+		spin_unlock_bh(&ctx->decrypt_compl_lock);
+		if (pending) {
 			err = crypto_wait_req(-EINPROGRESS, &ctx->async_wait);
 			if (err) {
 				/* one of async decrypt failed */
@@ -1869,6 +1922,10 @@ recv_end:
 		} else {
 			reinit_completion(&ctx->async_wait.completion);
 		}
+
+		/* There can be no concurrent accesses, since we have no
+		 * pending decrypt operations
+		 */
 		WRITE_ONCE(ctx->async_notify, false);
 
 		/* Drain records from the rx_list & copy if required */
@@ -1922,7 +1979,7 @@ ssize_t tls_sw_splice_read(struct socket *sock,  loff_t *ppos,
 
 		/* splice does not support reading control messages */
 		if (ctx->control != TLS_RECORD_TYPE_DATA) {
-			err = -ENOTSUPP;
+			err = -EINVAL;
 			goto splice_read_end;
 		}
 
@@ -1930,7 +1987,7 @@ ssize_t tls_sw_splice_read(struct socket *sock,  loff_t *ppos,
 			tls_err_abort(sk, EBADMSG);
 			goto splice_read_end;
 		}
-		ctx->decrypted = true;
+		ctx->decrypted = 1;
 	}
 	rxm = strp_msg(skb);
 
@@ -2031,7 +2088,7 @@ static void tls_queue(struct strparser *strp, struct sk_buff *skb)
 	struct tls_context *tls_ctx = tls_get_ctx(strp->sk);
 	struct tls_sw_context_rx *ctx = tls_sw_ctx_rx(tls_ctx);
 
-	ctx->decrypted = false;
+	ctx->decrypted = 0;
 
 	ctx->recv_pkt = skb;
 	strp_pause(strp);
@@ -2048,8 +2105,9 @@ static void tls_data_ready(struct sock *sk)
 	strp_data_ready(&ctx->strp);
 
 	psock = sk_psock_get(sk);
-	if (psock && !list_empty(&psock->ingress_msg)) {
-		ctx->saved_data_ready(sk);
+	if (psock) {
+		if (!list_empty(&psock->ingress_msg))
+			ctx->saved_data_ready(sk);
 		sk_psock_put(sk, psock);
 	}
 }
@@ -2079,7 +2137,8 @@ void tls_sw_release_resources_tx(struct sock *sk)
 	/* Free up un-sent records in tx_list. First, free
 	 * the partially sent record if any at head of tx_list.
 	 */
-	if (tls_free_partial_record(sk, tls_ctx)) {
+	if (tls_ctx->partially_sent_record) {
+		tls_free_partial_record(sk, tls_ctx);
 		rec = list_first_entry(&ctx->tx_list,
 				       struct tls_rec, list);
 		list_del(&rec->list);
@@ -2253,6 +2312,7 @@ int tls_set_sw_offload(struct sock *sk, struct tls_context *ctx, int tx)
 
 	if (tx) {
 		crypto_init_wait(&sw_ctx_tx->async_wait);
+		spin_lock_init(&sw_ctx_tx->encrypt_compl_lock);
 		crypto_info = &ctx->crypto_send.info;
 		cctx = &ctx->tx;
 		aead = &sw_ctx_tx->aead_send;
@@ -2261,6 +2321,7 @@ int tls_set_sw_offload(struct sock *sk, struct tls_context *ctx, int tx)
 		sw_ctx_tx->tx_work.sk = sk;
 	} else {
 		crypto_init_wait(&sw_ctx_rx->async_wait);
+		spin_lock_init(&sw_ctx_rx->decrypt_compl_lock);
 		crypto_info = &ctx->crypto_recv.info;
 		cctx = &ctx->rx;
 		skb_queue_head_init(&sw_ctx_rx->rx_list);
@@ -2387,10 +2448,11 @@ int tls_set_sw_offload(struct sock *sk, struct tls_context *ctx, int tx)
 		tfm = crypto_aead_tfm(sw_ctx_rx->aead_recv);
 
 		if (crypto_info->version == TLS_1_3_VERSION)
-			sw_ctx_rx->async_capable = false;
+			sw_ctx_rx->async_capable = 0;
 		else
 			sw_ctx_rx->async_capable =
-				tfm->__crt_alg->cra_flags & CRYPTO_ALG_ASYNC;
+				!!(tfm->__crt_alg->cra_flags &
+				   CRYPTO_ALG_ASYNC);
 
 		/* Set up strparser */
 		memset(&cb, 0, sizeof(cb));
