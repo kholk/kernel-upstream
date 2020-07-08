@@ -200,6 +200,13 @@ void ConfigItem::updateMenu(void)
 	}
 	if (!sym_has_value(sym) && visible)
 		prompt += " (NEW)";
+
+	if(!visible) {
+		setBackground(promptColIdx, QBrush(QColor("#E0E0E0")));
+	} else {
+		setBackground(promptColIdx, QBrush());
+	}
+
 set_prompt:
 	setText(promptColIdx, prompt);
 }
