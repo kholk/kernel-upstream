@@ -231,6 +231,10 @@ FULL_PROXY_FUNC(read, ssize_t, filp,
 			loff_t *ppos),
 		ARGS(filp, buf, size, ppos));
 
+FULL_PROXY_FUNC(read_iter, ssize_t, iocb->ki_filp,
+		PROTO(struct kiocb *iocb, struct iov_iter *iter),
+		ARGS(iocb, iter));
+
 FULL_PROXY_FUNC(write, ssize_t, filp,
 		PROTO(struct file *filp, const char __user *buf, size_t size,
 			loff_t *ppos),
@@ -286,6 +290,8 @@ static void __full_proxy_fops_init(struct file_operations *proxy_fops,
 		proxy_fops->llseek = full_proxy_llseek;
 	if (real_fops->read)
 		proxy_fops->read = full_proxy_read;
+	if (real_fops->read_iter)
+		proxy_fops->read_iter = full_proxy_read_iter;
 	if (real_fops->write)
 		proxy_fops->write = full_proxy_write;
 	if (real_fops->poll)
