@@ -336,7 +336,7 @@ int nvmet_enable_port(struct nvmet_port *port)
 	 * If the user requested PI support and the transport isn't pi capable,
 	 * don't enable the port.
 	 */
-	if (port->pi_enable && !ops->metadata_support) {
+	if (port->pi_enable && !(ops->flags & NVMF_METADATA_SUPPORTED)) {
 		pr_err("T10-PI is not supported by transport type %d\n",
 		       port->disc_addr.trtype);
 		ret = -EINVAL;
@@ -467,7 +467,7 @@ static int nvmet_p2pmem_ns_enable(struct nvmet_ns *ns)
 		return -EINVAL;
 	}
 
-	if (!blk_queue_pci_p2pdma(ns->bdev->bd_queue)) {
+	if (!blk_queue_pci_p2pdma(ns->bdev->bd_disk->queue)) {
 		pr_err("peer-to-peer DMA is not supported by the driver of %s\n",
 		       ns->device_path);
 		return -EINVAL;

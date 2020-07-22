@@ -105,16 +105,7 @@ EXPORT_SYMBOL(invalidate_bdev);
 
 static void set_init_blocksize(struct block_device *bdev)
 {
-	unsigned bsize = bdev_logical_block_size(bdev);
-	loff_t size = i_size_read(bdev->bd_inode);
-
-	while (bsize < PAGE_SIZE) {
-		if (size & bsize)
-			break;
-		bsize <<= 1;
-	}
-	bdev->bd_block_size = bsize;
-	bdev->bd_inode->i_blkbits = blksize_bits(bsize);
+	bdev->bd_inode->i_blkbits = blksize_bits(bdev_logical_block_size(bdev));
 }
 
 int set_blocksize(struct block_device *bdev, int size)
@@ -128,9 +119,8 @@ int set_blocksize(struct block_device *bdev, int size)
 		return -EINVAL;
 
 	/* Don't change the size if it is same as current */
-	if (bdev->bd_block_size != size) {
+	if (bdev->bd_inode->i_blkbits != blksize_bits(size)) {
 		sync_blockdev(bdev);
-		bdev->bd_block_size = size;
 		bdev->bd_inode->i_blkbits = blksize_bits(size);
 		kill_bdev(bdev);
 	}
@@ -703,12 +693,12 @@ int bdev_read_page(struct block_device *bdev, sector_t sector,
 	if (!ops->rw_page || bdev_get_integrity(bdev))
 		return result;
 
-	result = blk_queue_enter(bdev->bd_queue, 0);
+	result = blk_queue_enter(bdev->bd_disk->queue, 0);
 	if (result)
 		return result;
 	result = ops->rw_page(bdev, sector + get_start_sect(bdev), page,
 			      REQ_OP_READ);
-	blk_queue_exit(bdev->bd_queue);
+	blk_queue_exit(bdev->bd_disk->queue);
 	return result;
 }
 
@@ -739,7 +729,7 @@ int bdev_write_page(struct block_device *bdev, sector_t sector,
 
 	if (!ops->rw_page || bdev_get_integrity(bdev))
 		return -EOPNOTSUPP;
-	result = blk_queue_enter(bdev->bd_queue, 0);
+	result = blk_queue_enter(bdev->bd_disk->queue, 0);
 	if (result)
 		return result;
 
@@ -752,7 +742,7 @@ int bdev_write_page(struct block_device *bdev, sector_t sector,
 		clean_page_buffers(page);
 		unlock_page(page);
 	}
-	blk_queue_exit(bdev->bd_queue);
+	blk_queue_exit(bdev->bd_disk->queue);
 	return result;
 }
 
@@ -783,7 +773,6 @@ static void init_once(void *foo)
 
 	memset(bdev, 0, sizeof(*bdev));
 	mutex_init(&bdev->bd_mutex);
-	INIT_LIST_HEAD(&bdev->bd_list);
 #ifdef CONFIG_SYSFS
 	INIT_LIST_HEAD(&bdev->bd_holder_disks);
 #endif
@@ -799,9 +788,6 @@ static void bdev_evict_inode(struct inode *inode)
 	truncate_inode_pages_final(&inode->i_data);
 	invalidate_inode_buffers(inode); /* is it needed here? */
 	clear_inode(inode);
-	spin_lock(&bdev_lock);
-	list_del_init(&bdev->bd_list);
-	spin_unlock(&bdev_lock);
 	/* Detach inode from wb early as bdi_put() may free bdi->wb */
 	inode_detach_wb(inode);
 	if (bdev->bd_bdi != &noop_backing_dev_info) {
@@ -876,8 +862,6 @@ static int bdev_set(struct inode *inode, void *data)
 	return 0;
 }
 
-static LIST_HEAD(all_bdevs);
-
 struct block_device *bdget(dev_t dev)
 {
 	struct block_device *bdev;
@@ -895,7 +879,6 @@ struct block_device *bdget(dev_t dev)
 		bdev->bd_contains = NULL;
 		bdev->bd_super = NULL;
 		bdev->bd_inode = inode;
-		bdev->bd_block_size = i_blocksize(inode);
 		bdev->bd_part_count = 0;
 		bdev->bd_invalidated = 0;
 		inode->i_mode = S_IFBLK;
@@ -903,9 +886,6 @@ struct block_device *bdget(dev_t dev)
 		inode->i_bdev = bdev;
 		inode->i_data.a_ops = &def_blk_aops;
 		mapping_set_gfp_mask(&inode->i_data, GFP_USER);
-		spin_lock(&bdev_lock);
-		list_add(&bdev->bd_list, &all_bdevs);
-		spin_unlock(&bdev_lock);
 		unlock_new_inode(inode);
 	}
 	return bdev;
@@ -926,13 +906,14 @@ EXPORT_SYMBOL(bdgrab);
 
 long nr_blockdev_pages(void)
 {
-	struct block_device *bdev;
+	struct inode *inode;
 	long ret = 0;
-	spin_lock(&bdev_lock);
-	list_for_each_entry(bdev, &all_bdevs, bd_list) {
-		ret += bdev->bd_inode->i_mapping->nrpages;
-	}
-	spin_unlock(&bdev_lock);
+
+	spin_lock(&blockdev_superblock->s_inode_list_lock);
+	list_for_each_entry(inode, &blockdev_superblock->s_inodes, i_sb_list)
+		ret += inode->i_mapping->nrpages;
+	spin_unlock(&blockdev_superblock->s_inode_list_lock);
+
 	return ret;
 }
 
@@ -1187,8 +1168,8 @@ static void bd_clear_claiming(struct block_device *whole, void *holder)
  * Finish exclusive open of a block device. Mark the device as exlusively
  * open by the holder and wake up all waiters for exclusive open to finish.
  */
-void bd_finish_claiming(struct block_device *bdev, struct block_device *whole,
-			void *holder)
+static void bd_finish_claiming(struct block_device *bdev,
+		struct block_device *whole, void *holder)
 {
 	spin_lock(&bdev_lock);
 	BUG_ON(!bd_may_claim(bdev, whole, holder));
@@ -1203,7 +1184,6 @@ void bd_finish_claiming(struct block_device *bdev, struct block_device *whole,
 	bd_clear_claiming(whole, holder);
 	spin_unlock(&bdev_lock);
 }
-EXPORT_SYMBOL(bd_finish_claiming);
 
 /**
  * bd_abort_claiming - abort claiming of a block device
@@ -1580,7 +1560,6 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 	if (!bdev->bd_openers) {
 		first_open = true;
 		bdev->bd_disk = disk;
-		bdev->bd_queue = disk->queue;
 		bdev->bd_contains = bdev;
 		bdev->bd_partno = partno;
 
@@ -1601,7 +1580,6 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 					disk_put_part(bdev->bd_part);
 					bdev->bd_part = NULL;
 					bdev->bd_disk = NULL;
-					bdev->bd_queue = NULL;
 					mutex_unlock(&bdev->bd_mutex);
 					disk_unblock_events(disk);
 					put_disk_and_module(disk);
@@ -1678,7 +1656,6 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 	disk_put_part(bdev->bd_part);
 	bdev->bd_disk = NULL;
 	bdev->bd_part = NULL;
-	bdev->bd_queue = NULL;
 	if (bdev != bdev->bd_contains)
 		__blkdev_put(bdev->bd_contains, mode, 1);
 	bdev->bd_contains = NULL;

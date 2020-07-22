@@ -132,9 +132,10 @@ wait_queue_head_t drbd_pp_wait;
 DEFINE_RATELIMIT_STATE(drbd_ratelimit_state, 5 * HZ, 5);
 
 static const struct block_device_operations drbd_ops = {
-	.owner =   THIS_MODULE,
-	.open =    drbd_open,
-	.release = drbd_release,
+	.owner		= THIS_MODULE,
+	.submit_bio	= drbd_submit_bio,
+	.open		= drbd_open,
+	.release	= drbd_release,
 };
 
 struct bio *bio_alloc_drbd(gfp_t gfp_mask)
@@ -2324,7 +2325,7 @@ static void do_retry(struct work_struct *ws)
 		 * workqueues instead.
 		 */
 
-		/* We are not just doing generic_make_request(),
+		/* We are not just doing submit_bio_noacct(),
 		 * as we want to keep the start_time information. */
 		inc_ap_bio(device);
 		__drbd_make_request(device, bio, start_jif);
@@ -2801,11 +2802,10 @@ enum drbd_ret_code drbd_create_device(struct drbd_config_context *adm_ctx, unsig
 
 	drbd_init_set_defaults(device);
 
-	q = blk_alloc_queue(drbd_make_request, NUMA_NO_NODE);
+	q = blk_alloc_queue(NUMA_NO_NODE);
 	if (!q)
 		goto out_no_q;
 	device->rq_queue = q;
-	q->queuedata   = device;
 
 	disk = alloc_disk(1);
 	if (!disk)

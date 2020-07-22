@@ -101,9 +101,9 @@ static void simdisk_transfer(struct simdisk *dev, unsigned long sector,
 	spin_unlock(&dev->lock);
 }
 
-static blk_qc_t simdisk_make_request(struct request_queue *q, struct bio *bio)
+static blk_qc_t simdisk_submit_bio(struct bio *bio)
 {
-	struct simdisk *dev = q->queuedata;
+	struct simdisk *dev = bio->bi_disk->private_data;
 	struct bio_vec bvec;
 	struct bvec_iter iter;
 	sector_t sector = bio->bi_iter.bi_sector;
@@ -144,6 +144,7 @@ static void simdisk_release(struct gendisk *disk, fmode_t mode)
 
 static const struct block_device_operations simdisk_ops = {
 	.owner		= THIS_MODULE,
+	.submit_bio	= simdisk_submit_bio,
 	.open		= simdisk_open,
 	.release	= simdisk_release,
 };
@@ -267,13 +268,11 @@ static int __init simdisk_setup(struct simdisk *dev, int which,
 	spin_lock_init(&dev->lock);
 	dev->users = 0;
 
-	dev->queue = blk_alloc_queue(simdisk_make_request, NUMA_NO_NODE);
+	dev->queue = blk_alloc_queue(NUMA_NO_NODE);
 	if (dev->queue == NULL) {
 		pr_err("blk_alloc_queue failed\n");
 		goto out_alloc_queue;
 	}
-
-	dev->queue->queuedata = dev;
 
 	dev->gd = alloc_disk(SIMDISK_MINORS);
 	if (dev->gd == NULL) {

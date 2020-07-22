@@ -316,29 +316,34 @@ err_free_blkg:
 }
 
 /**
- * __blkg_lookup_create - lookup blkg, try to create one if not there
+ * blkg_lookup_create - lookup blkg, try to create one if not there
  * @blkcg: blkcg of interest
  * @q: request_queue of interest
  *
  * Lookup blkg for the @blkcg - @q pair.  If it doesn't exist, try to
  * create one.  blkg creation is performed recursively from blkcg_root such
  * that all non-root blkg's have access to the parent blkg.  This function
- * should be called under RCU read lock and @q->queue_lock.
+ * should be called under RCU read lock and takes @q->queue_lock.
  *
  * Returns the blkg or the closest blkg if blkg_create() fails as it walks
  * down from root.
  */
-struct blkcg_gq *__blkg_lookup_create(struct blkcg *blkcg,
-				      struct request_queue *q)
+static struct blkcg_gq *blkg_lookup_create(struct blkcg *blkcg,
+		struct request_queue *q)
 {
 	struct blkcg_gq *blkg;
+	unsigned long flags;
 
 	WARN_ON_ONCE(!rcu_read_lock_held());
-	lockdep_assert_held(&q->queue_lock);
 
-	blkg = __blkg_lookup(blkcg, q, true);
+	blkg = blkg_lookup(blkcg, q);
 	if (blkg)
 		return blkg;
+
+	spin_lock_irqsave(&q->queue_lock, flags);
+	blkg = __blkg_lookup(blkcg, q, true);
+	if (blkg)
+		goto found;
 
 	/*
 	 * Create blkgs walking down from blkcg_root to @blkcg, so that all
@@ -362,34 +367,16 @@ struct blkcg_gq *__blkg_lookup_create(struct blkcg *blkcg,
 		}
 
 		blkg = blkg_create(pos, q, NULL);
-		if (IS_ERR(blkg))
-			return ret_blkg;
+		if (IS_ERR(blkg)) {
+			blkg = ret_blkg;
+			break;
+		}
 		if (pos == blkcg)
-			return blkg;
-	}
-}
-
-/**
- * blkg_lookup_create - find or create a blkg
- * @blkcg: target block cgroup
- * @q: target request_queue
- *
- * This looks up or creates the blkg representing the unique pair
- * of the blkcg and the request_queue.
- */
-struct blkcg_gq *blkg_lookup_create(struct blkcg *blkcg,
-				    struct request_queue *q)
-{
-	struct blkcg_gq *blkg = blkg_lookup(blkcg, q);
-
-	if (unlikely(!blkg)) {
-		unsigned long flags;
-
-		spin_lock_irqsave(&q->queue_lock, flags);
-		blkg = __blkg_lookup_create(blkcg, q);
-		spin_unlock_irqrestore(&q->queue_lock, flags);
+			break;
 	}
 
+found:
+	spin_unlock_irqrestore(&q->queue_lock, flags);
 	return blkg;
 }
 
@@ -1025,7 +1012,7 @@ static int blkcg_css_online(struct cgroup_subsys_state *css)
  * blkcg_init_queue - initialize blkcg part of request queue
  * @q: request_queue to initialize
  *
- * Called from __blk_alloc_queue(). Responsible for initializing blkcg
+ * Called from blk_alloc_queue(). Responsible for initializing blkcg
  * part of new request_queue @q.
  *
  * RETURNS:
@@ -1725,6 +1712,139 @@ void blkcg_add_delay(struct blkcg_gq *blkg, u64 now, u64 delta)
 		return;
 	blkcg_scale_delay(blkg, now);
 	atomic64_add(delta, &blkg->delay_nsec);
+}
+
+/**
+ * blkg_tryget_closest - try and get a blkg ref on the closet blkg
+ * @bio: target bio
+ * @css: target css
+ *
+ * As the failure mode here is to walk up the blkg tree, this ensure that the
+ * blkg->parent pointers are always valid.  This returns the blkg that it ended
+ * up taking a reference on or %NULL if no reference was taken.
+ */
+static inline struct blkcg_gq *blkg_tryget_closest(struct bio *bio,
+		struct cgroup_subsys_state *css)
+{
+	struct blkcg_gq *blkg, *ret_blkg = NULL;
+
+	rcu_read_lock();
+	blkg = blkg_lookup_create(css_to_blkcg(css), bio->bi_disk->queue);
+	while (blkg) {
+		if (blkg_tryget(blkg)) {
+			ret_blkg = blkg;
+			break;
+		}
+		blkg = blkg->parent;
+	}
+	rcu_read_unlock();
+
+	return ret_blkg;
+}
+
+/**
+ * bio_associate_blkg_from_css - associate a bio with a specified css
+ * @bio: target bio
+ * @css: target css
+ *
+ * Associate @bio with the blkg found by combining the css's blkg and the
+ * request_queue of the @bio.  An association failure is handled by walking up
+ * the blkg tree.  Therefore, the blkg associated can be anything between @blkg
+ * and q->root_blkg.  This situation only happens when a cgroup is dying and
+ * then the remaining bios will spill to the closest alive blkg.
+ *
+ * A reference will be taken on the blkg and will be released when @bio is
+ * freed.
+ */
+void bio_associate_blkg_from_css(struct bio *bio,
+				 struct cgroup_subsys_state *css)
+{
+	if (bio->bi_blkg)
+		blkg_put(bio->bi_blkg);
+
+	if (css && css->parent) {
+		bio->bi_blkg = blkg_tryget_closest(bio, css);
+	} else {
+		blkg_get(bio->bi_disk->queue->root_blkg);
+		bio->bi_blkg = bio->bi_disk->queue->root_blkg;
+	}
+}
+EXPORT_SYMBOL_GPL(bio_associate_blkg_from_css);
+
+/**
+ * bio_associate_blkg - associate a bio with a blkg
+ * @bio: target bio
+ *
+ * Associate @bio with the blkg found from the bio's css and request_queue.
+ * If one is not found, bio_lookup_blkg() creates the blkg.  If a blkg is
+ * already associated, the css is reused and association redone as the
+ * request_queue may have changed.
+ */
+void bio_associate_blkg(struct bio *bio)
+{
+	struct cgroup_subsys_state *css;
+
+	rcu_read_lock();
+
+	if (bio->bi_blkg)
+		css = &bio_blkcg(bio)->css;
+	else
+		css = blkcg_css();
+
+	bio_associate_blkg_from_css(bio, css);
+
+	rcu_read_unlock();
+}
+EXPORT_SYMBOL_GPL(bio_associate_blkg);
+
+/**
+ * bio_clone_blkg_association - clone blkg association from src to dst bio
+ * @dst: destination bio
+ * @src: source bio
+ */
+void bio_clone_blkg_association(struct bio *dst, struct bio *src)
+{
+	if (src->bi_blkg) {
+		if (dst->bi_blkg)
+			blkg_put(dst->bi_blkg);
+		blkg_get(src->bi_blkg);
+		dst->bi_blkg = src->bi_blkg;
+	}
+}
+EXPORT_SYMBOL_GPL(bio_clone_blkg_association);
+
+static int blk_cgroup_io_type(struct bio *bio)
+{
+	if (op_is_discard(bio->bi_opf))
+		return BLKG_IOSTAT_DISCARD;
+	if (op_is_write(bio->bi_opf))
+		return BLKG_IOSTAT_WRITE;
+	return BLKG_IOSTAT_READ;
+}
+
+void blk_cgroup_bio_start(struct bio *bio)
+{
+	int rwd = blk_cgroup_io_type(bio), cpu;
+	struct blkg_iostat_set *bis;
+
+	cpu = get_cpu();
+	bis = per_cpu_ptr(bio->bi_blkg->iostat_cpu, cpu);
+	u64_stats_update_begin(&bis->sync);
+
+	/*
+	 * If the bio is flagged with BIO_CGROUP_ACCT it means this is a split
+	 * bio and we would have already accounted for the size of the bio.
+	 */
+	if (!bio_flagged(bio, BIO_CGROUP_ACCT)) {
+		bio_set_flag(bio, BIO_CGROUP_ACCT);
+		bis->cur.bytes[rwd] += bio->bi_iter.bi_size;
+	}
+	bis->cur.ios[rwd]++;
+
+	u64_stats_update_end(&bis->sync);
+	if (cgroup_subsys_on_dfl(io_cgrp_subsys))
+		cgroup_rstat_updated(bio->bi_blkg->blkcg->css.cgroup, cpu);
+	put_cpu();
 }
 
 static int __init blkcg_init(void)

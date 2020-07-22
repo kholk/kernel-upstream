@@ -36,7 +36,6 @@ struct nvme_loop_ctrl {
 	struct nvme_loop_iod	async_event_iod;
 	struct nvme_ctrl	ctrl;
 
-	struct nvmet_ctrl	*target_ctrl;
 	struct nvmet_port	*port;
 };
 
@@ -116,7 +115,8 @@ static void nvme_loop_queue_response(struct nvmet_req *req)
 			return;
 		}
 
-		nvme_end_request(rq, cqe->status, cqe->result);
+		if (!nvme_end_request(rq, cqe->status, cqe->result))
+			nvme_loop_complete_rq(rq);
 	}
 }
 

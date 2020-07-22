@@ -14,9 +14,7 @@
 /* Max future timer expiry for timeouts */
 #define BLK_MAX_TIMEOUT		(5 * HZ)
 
-#ifdef CONFIG_DEBUG_FS
 extern struct dentry *blk_debugfs_root;
-#endif
 
 struct blk_flush_queue {
 	unsigned int		flush_pending_idx:1;
@@ -223,21 +221,11 @@ ssize_t part_fail_show(struct device *dev, struct device_attribute *attr,
 		char *buf);
 ssize_t part_fail_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count);
-
-#ifdef CONFIG_FAIL_IO_TIMEOUT
-int blk_should_fake_timeout(struct request_queue *);
 ssize_t part_timeout_show(struct device *, struct device_attribute *, char *);
 ssize_t part_timeout_store(struct device *, struct device_attribute *,
 				const char *, size_t);
-#else
-static inline int blk_should_fake_timeout(struct request_queue *q)
-{
-	return 0;
-}
-#endif
 
-void __blk_queue_split(struct request_queue *q, struct bio **bio,
-		unsigned int *nr_segs);
+void __blk_queue_split(struct bio **bio, unsigned int *nr_segs);
 int ll_back_merge_fn(struct request *req, struct bio *bio,
 		unsigned int nr_segs);
 int ll_front_merge_fn(struct request *req,  struct bio *bio,
@@ -299,10 +287,12 @@ int create_task_io_context(struct task_struct *task, gfp_t gfp_mask, int node);
 extern int blk_throtl_init(struct request_queue *q);
 extern void blk_throtl_exit(struct request_queue *q);
 extern void blk_throtl_register_queue(struct request_queue *q);
+bool blk_throtl_bio(struct bio *bio);
 #else /* CONFIG_BLK_DEV_THROTTLING */
 static inline int blk_throtl_init(struct request_queue *q) { return 0; }
 static inline void blk_throtl_exit(struct request_queue *q) { }
 static inline void blk_throtl_register_queue(struct request_queue *q) { }
+static inline bool blk_throtl_bio(struct bio *bio) { return false; }
 #endif /* CONFIG_BLK_DEV_THROTTLING */
 #ifdef CONFIG_BLK_DEV_THROTTLING_LOW
 extern ssize_t blk_throtl_sample_time_show(struct request_queue *q, char *page);
@@ -433,8 +423,6 @@ static inline void part_nr_sects_write(struct hd_struct *part, sector_t size)
 	part->nr_sects = size;
 #endif
 }
-
-struct request_queue *__blk_alloc_queue(int node_id);
 
 int bio_add_hw_page(struct request_queue *q, struct bio *bio,
 		struct page *page, unsigned int len, unsigned int offset,
