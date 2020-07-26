@@ -1141,7 +1141,9 @@ static void io_req_clean_work(struct io_kiocb *req)
 		spin_unlock(&req->work.fs->lock);
 		if (fs)
 			free_fs_struct(fs);
+		req->work.fs = NULL;
 	}
+	req->flags &= ~REQ_F_WORK_INITIALIZED;
 }
 
 static void io_prep_async_work(struct io_kiocb *req)
@@ -4969,7 +4971,6 @@ static int io_poll_add(struct io_kiocb *req)
 
 	/* ->work is in union with hash_node and others */
 	io_req_clean_work(req);
-	req->flags &= ~REQ_F_WORK_INITIALIZED;
 
 	INIT_HLIST_NODE(&req->hash_node);
 	ipt.pt._qproc = io_poll_queue_proc;
@@ -5986,20 +5987,20 @@ again:
 	 * doesn't support non-blocking read/write attempts
 	 */
 	if (ret == -EAGAIN && !(req->flags & REQ_F_NOWAIT)) {
-		if (io_arm_poll_handler(req)) {
-			if (linked_timeout)
-				io_queue_linked_timeout(linked_timeout);
-			goto exit;
-		}
+		if (!io_arm_poll_handler(req)) {
 punt:
-		ret = io_prep_work_files(req);
-		if (unlikely(ret))
-			goto err;
-		/*
-		 * Queued up for async execution, worker will release
-		 * submit reference when the iocb is actually submitted.
-		 */
-		io_queue_async_work(req);
+			ret = io_prep_work_files(req);
+			if (unlikely(ret))
+				goto err;
+			/*
+			 * Queued up for async execution, worker will release
+			 * submit reference when the iocb is actually submitted.
+			 */
+			io_queue_async_work(req);
+		}
+
+		if (linked_timeout)
+			io_queue_linked_timeout(linked_timeout);
 		goto exit;
 	}
 
