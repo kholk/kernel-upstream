@@ -197,6 +197,15 @@ arm/newsoc
 		ARM: mstar: Add dts for msc313(e) based BreadBee boards
 		ARM: mstar: Add dts for 70mai midrive d08
 		ARM: mstar: Fix dts filename for 70mai midrive d08
+		dt-bindings: arm: mstar: Add binding details for mstar, pmsleep
+		dt-bindings: arm: mstar: Move existing MStar binding descriptions
+		ARM: mstar: Add IMI SRAM region
+		ARM: mstar: Adjust IMI size of infinity
+		ARM: mstar: Adjust IMI size for mercury5
+		ARM: mstar: Adjust IMI size for infinity3
+		ARM: mstar: Add PMU
+		ARM: mstar: Add "pmsleep" node to base dtsi
+		ARM: mstar: Add reboot support
 
 arm/late
 
