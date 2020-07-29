@@ -104,6 +104,7 @@
  * @cpm_base: CPM System Level Control and Status Register(SLCR) Base
  * @dev: Device pointer
  * @intx_domain: Legacy IRQ domain pointer
+ * @cpm_domain: CPM IRQ domain pointer
  * @cfg: Holds mappings of config space window
  * @intx_irq: legacy interrupt number
  * @irq: Error interrupt number
