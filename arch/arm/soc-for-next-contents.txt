@@ -114,6 +114,8 @@ arm/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.9-devicetree
 	patch
 		ARM: dts: berlin: Align L2 cache-controller nodename with dtschema
+	<no branch> (f1bb924e8f5b50752a80fa5b48c43003680a7b64)
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-3
 
 arm/drivers
 	drivers/soc-attr
@@ -210,12 +212,4 @@ arm/newsoc
 arm/late
 
 arm/fixes
-	sunxi/fixes
-		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-fixes-for-5.8-1
-	imx/fixes
-		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-5.8-3
-	<no branch> (09781ba0395c46b1c844f47e405e3ce7856f5989)
-		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-fixes-5.8-1
-	patch
-		ARM: dts: keystone-k2g-evm: fix rgmii phy-mode for ksz9031 phy
 
