@@ -600,7 +600,6 @@ enum {
 struct async_poll {
 	struct io_poll_iocb	poll;
 	struct io_poll_iocb	*double_poll;
-	struct io_wq_work	work;
 };
 
 /*
@@ -641,36 +640,26 @@ struct io_kiocb {
 	u16				buf_index;
 	u32				result;
 
-	struct io_ring_ctx	*ctx;
-	unsigned int		flags;
-	refcount_t		refs;
-	struct task_struct	*task;
-	u64			user_data;
+	struct io_ring_ctx		*ctx;
+	unsigned int			flags;
+	refcount_t			refs;
+	struct task_struct		*task;
+	u64				user_data;
 
-	struct list_head	link_list;
+	struct list_head		link_list;
 
 	/*
 	 * 1. used with ctx->iopoll_list with reads/writes
 	 * 2. to track reqs with ->files (see io_op_def::file_table)
 	 */
-	struct list_head	inflight_entry;
+	struct list_head		inflight_entry;
 
-	struct percpu_ref	*fixed_file_refs;
-
-	union {
-		/*
-		 * Only commands that never go async can use the below fields,
-		 * obviously. Right now only IORING_OP_POLL_ADD uses them, and
-		 * async armed poll handlers for regular commands. The latter
-		 * restore the work, if needed.
-		 */
-		struct {
-			struct hlist_node	hash_node;
-			struct async_poll	*apoll;
-		};
-		struct io_wq_work	work;
-	};
-	struct callback_head	task_work;
+	struct percpu_ref		*fixed_file_refs;
+	struct callback_head		task_work;
+	/* for polled requests, i.e. IORING_OP_POLL_ADD and async armed poll */
+	struct hlist_node		hash_node;
+	struct async_poll		*apoll;
+	struct io_wq_work		work;
 };
 
 struct io_defer_entry {
@@ -902,7 +891,8 @@ enum io_mem_account {
 	ACCT_PINNED,
 };
 
-static bool io_rw_reissue(struct io_kiocb *req, long res);
+static void __io_complete_rw(struct io_kiocb *req, long res, long res2,
+			     struct io_comp_state *cs);
 static void io_cqring_fill_event(struct io_kiocb *req, long res);
 static void io_put_req(struct io_kiocb *req);
 static void io_double_put_req(struct io_kiocb *req);
@@ -913,8 +903,6 @@ static int __io_sqe_files_update(struct io_ring_ctx *ctx,
 				 struct io_uring_files_update *ip,
 				 unsigned nr_args);
 static int io_prep_work_files(struct io_kiocb *req);
-static void io_complete_rw_common(struct kiocb *kiocb, long res,
-				  struct io_comp_state *cs);
 static void __io_clean_op(struct io_kiocb *req);
 static int io_file_get(struct io_submit_state *state, struct io_kiocb *req,
 		       int fd, struct file **out_file, bool fixed);
@@ -1217,7 +1205,8 @@ static void io_kill_timeout(struct io_kiocb *req)
 
 	ret = hrtimer_try_to_cancel(&req->io->timeout.timer);
 	if (ret != -1) {
-		atomic_inc(&req->ctx->cq_timeouts);
+		atomic_set(&req->ctx->cq_timeouts,
+			atomic_read(&req->ctx->cq_timeouts) + 1);
 		list_del_init(&req->timeout.list);
 		req->flags |= REQ_F_COMP_LOCKED;
 		io_cqring_fill_event(req, 0);
@@ -1315,6 +1304,15 @@ static void io_cqring_ev_posted(struct io_ring_ctx *ctx)
 		eventfd_signal(ctx->cq_ev_fd, 1);
 }
 
+static void io_cqring_mark_overflow(struct io_ring_ctx *ctx)
+{
+	if (list_empty(&ctx->cq_overflow_list)) {
+		clear_bit(0, &ctx->sq_check_overflow);
+		clear_bit(0, &ctx->cq_check_overflow);
+		ctx->rings->sq_flags &= ~IORING_SQ_CQ_OVERFLOW;
+	}
+}
+
 /* Returns true if there are no backlogged entries after the flush */
 static bool io_cqring_overflow_flush(struct io_ring_ctx *ctx, bool force)
 {
@@ -1359,11 +1357,8 @@ static bool io_cqring_overflow_flush(struct io_ring_ctx *ctx, bool force)
 	}
 
 	io_commit_cqring(ctx);
-	if (cqe) {
-		clear_bit(0, &ctx->sq_check_overflow);
-		clear_bit(0, &ctx->cq_check_overflow);
-		ctx->rings->sq_flags &= ~IORING_SQ_CQ_OVERFLOW;
-	}
+	io_cqring_mark_overflow(ctx);
+
 	spin_unlock_irqrestore(&ctx->completion_lock, flags);
 	io_cqring_ev_posted(ctx);
 
@@ -1987,8 +1982,7 @@ static void io_iopoll_queue(struct list_head *again)
 	do {
 		req = list_first_entry(again, struct io_kiocb, inflight_entry);
 		list_del(&req->inflight_entry);
-		if (!io_rw_reissue(req, -EAGAIN))
-			io_complete_rw_common(&req->rw.kiocb, -EAGAIN, NULL);
+		__io_complete_rw(req, -EAGAIN, 0, NULL);
 	} while (!list_empty(again));
 }
 
@@ -4668,10 +4662,6 @@ static void io_async_task_func(struct callback_head *cb)
 	io_poll_remove_double(req, apoll->double_poll);
 	spin_unlock_irq(&ctx->completion_lock);
 
-	/* restore ->work in case we need to retry again */
-	if (req->flags & REQ_F_WORK_INITIALIZED)
-		memcpy(&req->work, &apoll->work, sizeof(req->work));
-
 	if (!READ_ONCE(apoll->poll.canceled))
 		__io_req_task_submit(req);
 	else
@@ -4763,9 +4753,6 @@ static bool io_arm_poll_handler(struct io_kiocb *req)
 	apoll->double_poll = NULL;
 
 	req->flags |= REQ_F_POLLED;
-	if (req->flags & REQ_F_WORK_INITIALIZED)
-		memcpy(&apoll->work, &req->work, sizeof(req->work));
-
 	io_get_req_task(req);
 	req->apoll = apoll;
 	INIT_HLIST_NODE(&req->hash_node);
@@ -4784,8 +4771,6 @@ static bool io_arm_poll_handler(struct io_kiocb *req)
 	if (ret) {
 		io_poll_remove_double(req, apoll->double_poll);
 		spin_unlock_irq(&ctx->completion_lock);
-		if (req->flags & REQ_F_WORK_INITIALIZED)
-			memcpy(&req->work, &apoll->work, sizeof(req->work));
 		kfree(apoll->double_poll);
 		kfree(apoll);
 		return false;
@@ -4828,14 +4813,6 @@ static bool io_poll_remove_one(struct io_kiocb *req)
 		do_complete = __io_poll_remove_one(req, &apoll->poll);
 		if (do_complete) {
 			io_put_req(req);
-			/*
-			 * restore ->work because we will call
-			 * io_req_clean_work below when dropping the
-			 * final reference.
-			 */
-			if (req->flags & REQ_F_WORK_INITIALIZED)
-				memcpy(&req->work, &apoll->work,
-				       sizeof(req->work));
 			kfree(apoll->double_poll);
 			kfree(apoll);
 		}
@@ -4969,9 +4946,6 @@ static int io_poll_add(struct io_kiocb *req)
 	struct io_poll_table ipt;
 	__poll_t mask;
 
-	/* ->work is in union with hash_node and others */
-	io_req_clean_work(req);
-
 	INIT_HLIST_NODE(&req->hash_node);
 	ipt.pt._qproc = io_poll_queue_proc;
 
@@ -4999,9 +4973,10 @@ static enum hrtimer_restart io_timeout_fn(struct hrtimer *timer)
 	struct io_ring_ctx *ctx = req->ctx;
 	unsigned long flags;
 
-	atomic_inc(&ctx->cq_timeouts);
-
 	spin_lock_irqsave(&ctx->completion_lock, flags);
+	atomic_set(&req->ctx->cq_timeouts,
+		atomic_read(&req->ctx->cq_timeouts) + 1);
+
 	/*
 	 * We could be racing with timeout deletion. If the list is empty,
 	 * then timeout lookup already found it and will be handling it.
@@ -7875,15 +7850,12 @@ static void io_uring_cancel_files(struct io_ring_ctx *ctx,
 			spin_lock_irq(&ctx->completion_lock);
 			list_del(&cancel_req->compl.list);
 			cancel_req->flags &= ~REQ_F_OVERFLOW;
-			if (list_empty(&ctx->cq_overflow_list)) {
-				clear_bit(0, &ctx->sq_check_overflow);
-				clear_bit(0, &ctx->cq_check_overflow);
-				ctx->rings->sq_flags &= ~IORING_SQ_CQ_OVERFLOW;
-			}
-			spin_unlock_irq(&ctx->completion_lock);
 
+			io_cqring_mark_overflow(ctx);
 			WRITE_ONCE(ctx->rings->cq_overflow,
 				atomic_inc_return(&ctx->cached_cq_overflow));
+			io_commit_cqring(ctx);
+			spin_unlock_irq(&ctx->completion_lock);
 
 			/*
 			 * Put inflight ref and overflow ref. If that's
