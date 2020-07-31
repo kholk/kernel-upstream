@@ -15,6 +15,9 @@ arm/soc
 		MAINTAINERS: arm/amlogic: add designated reviewers
 	at91/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-soc-5.9
+	socfpga/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_update_for_v5.9
+		contains socfpga/dt
 
 arm/dt
 	renesas/dt
@@ -114,8 +117,12 @@ arm/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.9-devicetree
 	patch
 		ARM: dts: berlin: Align L2 cache-controller nodename with dtschema
-	<no branch> (f1bb924e8f5b50752a80fa5b48c43003680a7b64)
+	meson/dt64-3
 		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-3
+	meson/dt64-4
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-4
+	<no branch> (9d56a1c21f1caf52ca4f6f578e98a0503aa8001d)
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-for-5.9-2
 
 arm/drivers
 	drivers/soc-attr
@@ -150,6 +157,10 @@ arm/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/memory-controller-drv-5.9
 	k3/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/drivers_soc_for_5.9
+	drivers/memory-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-5.9-2
+	qcom/drivers-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-drivers-for-5.9-2
 
 arm/defconfig
 	renesas/defconfig
@@ -208,6 +219,9 @@ arm/newsoc
 		ARM: mstar: Add PMU
 		ARM: mstar: Add "pmsleep" node to base dtsi
 		ARM: mstar: Add reboot support
+		dt-bindings: mfd: syscon: add compatible string for mstar,msc313-pmsleep
+		dt-bindings: arm: mstar: remove the binding description for mstar,pmsleep
+		ARM: mstar: Correct the compatible string for pmsleep
 
 arm/late
 
