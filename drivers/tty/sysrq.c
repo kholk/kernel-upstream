@@ -382,6 +382,7 @@ static void moom_callback(struct work_struct *ignored)
 		.memcg = NULL,
 		.gfp_mask = gfp_mask,
 		.order = -1,
+		.chosen_points = LONG_MIN,
 	};
 
 	mutex_lock(&oom_lock);

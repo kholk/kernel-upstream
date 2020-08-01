@@ -3929,6 +3929,7 @@ __alloc_pages_may_oom(gfp_t gfp_mask, unsigned int order,
 		.memcg = NULL,
 		.gfp_mask = gfp_mask,
 		.order = order,
+		.chosen_points = LONG_MIN,
 	};
 	struct page *page;
 
