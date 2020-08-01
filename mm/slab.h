@@ -257,25 +257,8 @@ static inline bool page_has_obj_cgroups(struct page *page)
 	return ((unsigned long)page->obj_cgroups & 0x1UL);
 }
 
-static inline int memcg_alloc_page_obj_cgroups(struct page *page,
-					       struct kmem_cache *s, gfp_t gfp)
-{
-	unsigned int objects = objs_per_slab_page(s, page);
-	void *vec;
-
-	vec = kcalloc_node(objects, sizeof(struct obj_cgroup *), gfp,
-			   page_to_nid(page));
-	if (!vec)
-		return -ENOMEM;
-
-	if (cmpxchg(&page->obj_cgroups, NULL,
-		    (struct obj_cgroup **) ((unsigned long)vec | 0x1UL)))
-		kfree(vec);
-	else
-		kmemleak_not_leak(vec);
-
-	return 0;
-}
+int memcg_alloc_page_obj_cgroups(struct page *page, struct kmem_cache *s,
+				 gfp_t gfp);
 
 static inline void memcg_free_page_obj_cgroups(struct page *page)
 {
