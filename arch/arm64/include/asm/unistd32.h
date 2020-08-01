@@ -891,7 +891,7 @@ __SYSCALL(__NR_faccessat2, sys_faccessat2)
 __SYSCALL(__NR_watch_mount, sys_watch_mount)
 #define __NR_fsinfo 441
 __SYSCALL(__NR_fsinfo, sys_fsinfo)
-#define __NR_fsinfo 443
+#define __NR_process_madvise 442
 __SYSCALL(__NR_process_madvise, compat_sys_process_madvise)
 
 /*
