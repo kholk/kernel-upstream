@@ -538,13 +538,13 @@ uspace_segv:
 		if (regs->pc & 1)
 			die("unaligned program counter", regs, error_code);
 
-		oldfs = force_uaccess_begin();
+		set_fs(KERNEL_DS);
 		if (copy_from_user(&instruction, (void __user *)(regs->pc),
 				   sizeof(instruction))) {
 			/* Argh. Fault on the instruction itself.
 			   This should never happen non-SMP
 			*/
-			force_uaccess_end(oldfs);
+			set_fs(oldfs);
 			die("insn faulting in do_address_error", regs, 0);
 		}
 
@@ -552,7 +552,7 @@ uspace_segv:
 
 		handle_unaligned_access(instruction, regs, &user_mem_access,
 					0, address);
-		force_uaccess_end(oldfs);
+		set_fs(oldfs);
 	}
 }
 
