@@ -7,7 +7,7 @@
 #include <linux/bits.h>
 
 
-void genmask_test(struct kunit *test)
+static void genmask_test(struct kunit *test)
 {
 	KUNIT_EXPECT_EQ(test, 1ul, GENMASK(0, 0));
 	KUNIT_EXPECT_EQ(test, 3ul, GENMASK(1, 0));
@@ -24,7 +24,7 @@ void genmask_test(struct kunit *test)
 
 }
 
-void genmask_ull_test(struct kunit *test)
+static void genmask_ull_test(struct kunit *test)
 {
 	KUNIT_EXPECT_EQ(test, 1ull, GENMASK_ULL(0, 0));
 	KUNIT_EXPECT_EQ(test, 3ull, GENMASK_ULL(1, 0));
@@ -39,7 +39,7 @@ void genmask_ull_test(struct kunit *test)
 #endif
 }
 
-void genmask_input_check_test(struct kunit *test)
+static void genmask_input_check_test(struct kunit *test)
 {
 	unsigned int x, y;
 	int z, w;
