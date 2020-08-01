@@ -253,24 +253,32 @@ which are function pointers of struct address_space_operations.
      PG_isolated is alias with PG_reclaim flag so driver shouldn't use the flag
      for own purpose.
 
-Quantifying Migration
+Monitoring Migration
 =====================
-Following events can be used to quantify page migration.
 
-1. PGMIGRATE_SUCCESS       /* Normal page migration success */
-2. PGMIGRATE_FAIL          /* Normal page migration failure */
-3. THP_MIGRATION_SUCCESS   /* Transparent huge page migration success */
-4. THP_MIGRATION_FAILURE   /* Transparent huge page migration failure */
-5. THP_MIGRATION_SPLIT     /* Transparent huge page got split, retried */
+The following events (counters) can be used to monitor page migration.
 
-THP_MIGRATION_SUCCESS is when THP is migrated successfully without getting
-split into it's subpages. THP_MIGRATION_FAILURE is when THP could neither
-be migrated nor be split. THP_MIGRATION_SPLIT is when THP could not
-just be migrated as is but instead get split into it's subpages and later
-retried as normal pages. THP events would also update normal page migration
-statistics PGMIGRATE_SUCCESS and PGMIGRATE_FAILURE. These events will help
-in quantifying and analyzing various THP migration events including both
-success and failure cases.
+1. PGMIGRATE_SUCCESS: Normal page migration success. Each count means that a
+   page was migrated. If the page was a non-THP page, then this counter is
+   increased by one. If the page was a THP, then this counter is increased by
+   the number of THP subpages. For example, migration of a single 2MB THP that
+   has 4KB-size base pages (subpages) will cause this counter to increase by
+   512.
+
+2. PGMIGRATE_FAIL: Normal page migration failure. Same counting rules as for
+   _SUCCESS, above: this will be increased by the number of subpages, if it was
+   a THP.
+
+3. THP_MIGRATION_SUCCESS: A THP was migrated without being split.
+
+4. THP_MIGRATION_FAIL: A THP could not be migrated nor it could be split.
+
+5. THP_MIGRATION_SPLIT: A THP was migrated, but not as such: first, the THP had
+   to be split. After splitting, a migration retry was used for it's sub-pages.
+
+THP_MIGRATION_* events also update the appropriate PGMIGRATE_SUCCESS or
+PGMIGRATE_FAIL events. For example, a THP migration failure will cause both
+THP_MIGRATION_FAIL and PGMIGRATE_FAIL to increase.
 
 Christoph Lameter, May 8, 2006.
 Minchan Kim, Mar 28, 2016.

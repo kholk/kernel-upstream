@@ -1429,7 +1429,7 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 	struct page *page;
 	struct page *page2;
 	int swapwrite = current->flags & PF_SWAPWRITE;
-	int rc, thp_n_pages;
+	int rc, nr_subpages;
 
 	if (!swapwrite)
 		current->flags |= PF_SWAPWRITE;
@@ -1446,7 +1446,7 @@ retry:
 			 * during migration.
 			 */
 			is_thp = PageTransHuge(page);
-			thp_n_pages = thp_nr_pages(page);
+			nr_subpages = thp_nr_pages(page);
 			cond_resched();
 
 			if (PageHuge(page))
@@ -1483,7 +1483,7 @@ retry:
 				}
 				if (is_thp) {
 					nr_thp_failed++;
-					nr_failed += thp_n_pages;
+					nr_failed += nr_subpages;
 					goto out;
 				}
 				nr_failed++;
@@ -1498,7 +1498,7 @@ retry:
 			case MIGRATEPAGE_SUCCESS:
 				if (is_thp) {
 					nr_thp_succeeded++;
-					nr_succeeded += thp_n_pages;
+					nr_succeeded += nr_subpages;
 					break;
 				}
 				nr_succeeded++;
@@ -1512,7 +1512,7 @@ retry:
 				 */
 				if (is_thp) {
 					nr_thp_failed++;
-					nr_failed += thp_n_pages;
+					nr_failed += nr_subpages;
 					break;
 				}
 				nr_failed++;
@@ -1524,16 +1524,11 @@ retry:
 	nr_thp_failed += thp_retry;
 	rc = nr_failed;
 out:
-	if (nr_succeeded)
-		count_vm_events(PGMIGRATE_SUCCESS, nr_succeeded);
-	if (nr_failed)
-		count_vm_events(PGMIGRATE_FAIL, nr_failed);
-	if (nr_thp_succeeded)
-		count_vm_events(THP_MIGRATION_SUCCESS, nr_thp_succeeded);
-	if (nr_thp_failed)
-		count_vm_events(THP_MIGRATION_FAILURE, nr_thp_failed);
-	if (nr_thp_split)
-		count_vm_events(THP_MIGRATION_SPLIT, nr_thp_split);
+	count_vm_events(PGMIGRATE_SUCCESS, nr_succeeded);
+	count_vm_events(PGMIGRATE_FAIL, nr_failed);
+	count_vm_events(THP_MIGRATION_SUCCESS, nr_thp_succeeded);
+	count_vm_events(THP_MIGRATION_FAIL, nr_thp_failed);
+	count_vm_events(THP_MIGRATION_SPLIT, nr_thp_split);
 	trace_mm_migrate_pages(nr_succeeded, nr_failed, nr_thp_succeeded,
 			       nr_thp_failed, nr_thp_split, mode, reason);
 
