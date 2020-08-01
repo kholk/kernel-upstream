@@ -38,11 +38,11 @@ enum memcg_stat_item {
 	MEMCG_NR_STAT,
 };
 
-static __always_inline bool memcg_stat_item_in_bytes(enum memcg_stat_item item)
+static __always_inline bool memcg_stat_item_in_bytes(int idx)
 {
-	if (item == MEMCG_PERCPU_B)
+	if (idx == MEMCG_PERCPU_B)
 		return true;
-	return vmstat_item_in_bytes(item);
+	return vmstat_item_in_bytes(idx);
 }
 
 enum memcg_memory_event {
