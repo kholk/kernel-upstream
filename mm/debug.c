@@ -70,7 +70,12 @@ void __dump_page(struct page *page, const char *reason)
 
 	if (page < head || (page >= head + MAX_ORDER_NR_PAGES)) {
 		/* Corrupt page, cannot call page_mapping */
-		mapping = page->mapping;
+		unsigned long tmp = (unsigned long)page->mapping;
+
+		if (tmp & PAGE_MAPPING_ANON)
+			mapping = NULL;
+		else
+			mapping = (void *)(tmp & ~PAGE_MAPPING_FLAGS);
 		head = page;
 		compound = false;
 	} else {
