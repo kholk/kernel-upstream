@@ -54,7 +54,6 @@
 #include <asm/uv/uv.h>
 #include <asm/setup.h>
 #include <asm/ftrace.h>
-#include <asm/hypervisor.h>
 
 #include "mm_internal.h"
 
@@ -1410,7 +1409,7 @@ static unsigned long probe_memory_block_size(void)
 	 * Use max block size to minimize overhead on bare metal, where
 	 * alignment for memory hotplug isn't a concern.
 	 */
-	if (hypervisor_is_type(X86_HYPER_NATIVE)) {
+	if (!boot_cpu_has(X86_FEATURE_HYPERVISOR)) {
 		bz = MAX_BLOCK_SIZE;
 		goto done;
 	}
