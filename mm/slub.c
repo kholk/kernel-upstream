@@ -1272,7 +1272,7 @@ out:
  *
  * returns the start of next block if there's any, or NULL
  */
-char *
+static char *
 parse_slub_debug_flags(char *str, slab_flags_t *flags, char **slabs, bool init)
 {
 	bool higher_order_disable = false;
