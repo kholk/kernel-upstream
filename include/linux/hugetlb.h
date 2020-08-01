@@ -705,7 +705,7 @@ static inline gfp_t htlb_modify_alloc_mask(struct hstate *h, gfp_t gfp_mask)
 {
 	gfp_t modified_mask = htlb_alloc_mask(h);
 
-	/* Some callers might want to enfoce node */
+	/* Some callers might want to enforce node */
 	modified_mask |= (gfp_mask & __GFP_THISNODE);
 
 	return modified_mask;
