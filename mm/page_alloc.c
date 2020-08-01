@@ -3591,18 +3591,18 @@ static inline bool zone_watermark_fast(struct zone *z, unsigned int order,
 				unsigned int alloc_flags)
 {
 	long free_pages;
-	long unusable_free;
 
 	free_pages = zone_page_state(z, NR_FREE_PAGES);
-	unusable_free = __zone_watermark_unusable_free(z, order, alloc_flags);
 
 	/*
 	 * Fast check for order-0 only. If this fails then the reserves
 	 * need to be calculated.
 	 */
 	if (!order) {
-		long fast_free = free_pages - unusable_free;
+		long fast_free;
 
+		fast_free = free_pages;
+		fast_free -= __zone_watermark_unusable_free(z, 0, alloc_flags);
 		if (fast_free > mark + z->lowmem_reserve[highest_zoneidx])
 			return true;
 	}
