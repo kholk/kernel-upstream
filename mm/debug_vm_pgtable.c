@@ -745,7 +745,7 @@ static void __init hugetlb_advanced_tests(struct mm_struct *mm,
 {
 	struct page *page = pfn_to_page(pfn);
 	pte_t pte = ptep_get(ptep);
-	unsigned long paddr = (__pfn_to_phys(pfn) | RANDOM_ORVALUE) & PMD_MASK;
+	unsigned long paddr = __pfn_to_phys(pfn) & PMD_MASK;
 
 	pte = pte_mkhuge(mk_pte(pfn_to_page(PHYS_PFN(paddr)), prot));
 	set_huge_pte_at(mm, vaddr, ptep, pte);
