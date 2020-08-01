@@ -69,6 +69,6 @@ static inline pgtable_t pte_alloc_one(struct mm_struct *mm)
 }
 
 #define pmd_pgtable(pmd) pmd_page(pmd)
-#endif CONFIG_MMU
+#endif /* CONFIG_MMU */
 
 #endif /* _XTENSA_PGALLOC_H */
