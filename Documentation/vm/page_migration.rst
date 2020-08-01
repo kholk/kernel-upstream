@@ -253,5 +253,24 @@ which are function pointers of struct address_space_operations.
      PG_isolated is alias with PG_reclaim flag so driver shouldn't use the flag
      for own purpose.
 
+Quantifying Migration
+=====================
+Following events can be used to quantify page migration.
+
+1. PGMIGRATE_SUCCESS       /* Normal page migration success */
+2. PGMIGRATE_FAIL          /* Normal page migration failure */
+3. THP_MIGRATION_SUCCESS   /* Transparent huge page migration success */
+4. THP_MIGRATION_FAILURE   /* Transparent huge page migration failure */
+5. THP_MIGRATION_SPLIT     /* Transparent huge page got split, retried */
+
+THP_MIGRATION_SUCCESS is when THP is migrated successfully without getting
+split into it's subpages. THP_MIGRATION_FAILURE is when THP could neither
+be migrated nor be split. THP_MIGRATION_SPLIT is when THP could not
+just be migrated as is but instead get split into it's subpages and later
+retried as normal pages. THP events would also update normal page migration
+statistics PGMIGRATE_SUCCESS and PGMIGRATE_FAILURE. These events will help
+in quantifying and analyzing various THP migration events including both
+success and failure cases.
+
 Christoph Lameter, May 8, 2006.
 Minchan Kim, Mar 28, 2016.
