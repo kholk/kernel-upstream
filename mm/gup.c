@@ -1704,7 +1704,7 @@ check_again:
 					mod_node_page_state(page_pgdat(head),
 							    NR_ISOLATED_ANON +
 							    page_is_file_lru(head),
-							    hpage_nr_pages(head));
+							    thp_nr_pages(head));
 				}
 			}
 		}
