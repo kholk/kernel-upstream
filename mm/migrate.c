@@ -1429,7 +1429,7 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 	struct page *page;
 	struct page *page2;
 	int swapwrite = current->flags & PF_SWAPWRITE;
-	int rc, thp_nr_pages;
+	int rc, thp_n_pages;
 
 	if (!swapwrite)
 		current->flags |= PF_SWAPWRITE;
@@ -1446,7 +1446,7 @@ retry:
 			 * during migration.
 			 */
 			is_thp = PageTransHuge(page);
-			thp_nr_pages = hpage_nr_pages(page);
+			thp_n_pages = thp_nr_pages(page);
 			cond_resched();
 
 			if (PageHuge(page))
@@ -1483,7 +1483,7 @@ retry:
 				}
 				if (is_thp) {
 					nr_thp_failed++;
-					nr_failed += thp_nr_pages;
+					nr_failed += thp_n_pages;
 					goto out;
 				}
 				nr_failed++;
@@ -1498,7 +1498,7 @@ retry:
 			case MIGRATEPAGE_SUCCESS:
 				if (is_thp) {
 					nr_thp_succeeded++;
-					nr_succeeded += thp_nr_pages;
+					nr_succeeded += thp_n_pages;
 					break;
 				}
 				nr_succeeded++;
@@ -1512,7 +1512,7 @@ retry:
 				 */
 				if (is_thp) {
 					nr_thp_failed++;
-					nr_failed += thp_nr_pages;
+					nr_failed += thp_n_pages;
 					break;
 				}
 				nr_failed++;
