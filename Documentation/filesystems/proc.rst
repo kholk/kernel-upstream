@@ -1673,6 +1673,9 @@ requires CAP_SYS_RESOURCE.
 3.2 /proc/<pid>/oom_score - Display current oom-killer score
 -------------------------------------------------------------
 
+Please note that the exported value includes oom_score_adj so it is effectively
+in range [0,2000].
+
 This file can be used to check the current score used by the oom-killer is for
 any given <pid>. Use it together with /proc/<pid>/oom_score_adj to tune which
 process should be killed in an out-of-memory situation.
