@@ -1,0 +1,229 @@
+arm/soc
+	patch
+		udc: lpc32xx: mark local function static
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.9/soc-signed
+	patch
+		ARM: rpc: Change blacklist to quirklist in ecode.c file
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-5.9
+	davinci/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v5.9/soc
+	mvebu/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-arm-5.9-1
+	patch
+		MAINTAINERS: arm/amlogic: add designated reviewers
+	at91/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-soc-5.9
+	socfpga/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_update_for_v5.9
+		contains socfpga/dt
+
+arm/dt
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-dt-for-v5.9-tag1
+	uniphier/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt-v5.9
+	uniphier/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt64-v5.9
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.9/dt-signed
+	broadcom/dts
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.9/devicetree
+	omap/drop-pdata
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.9/ti-sysc-drop-pdata-take2-signed
+	omap/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.9/dt-pt2-signed
+	mediatek/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.8-next-dts64
+	renesas/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-dt-for-v5.9-tag2
+	renesas/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-dt-bindings-for-v5.9-tag1
+	amlogic/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt
+	amlogic/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
+	tegra/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-dt-bindings
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-arm-dt
+	tegra/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-arm64-dt
+	socfpga/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_update_for_v5.9
+	imx/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-bindings-5.9
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-5.9
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-5.9
+	versatile/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/versatile-for-v5.9
+	sunxi/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt-for-5.9-1
+	hisi/dt
+		git://github.com/hisilicon/linux-hisi tags/hisi-arm32-dt-for-5.9
+	hisi/dt64
+		git://github.com/hisilicon/linux-hisi tags/hisi-arm64-dt-for-5.9
+	qcom/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-for-5.9
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-dts-for-5.9
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.9
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-5.9
+	stm32/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-dt-for-v5.9-1
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-dts-for-v5.9-1
+	patch
+		ARM: dts: mmp2-olpc-xo-1-75: Fix camera I2C node validation
+		ARM: dts: mmp2-olpc-xo-1-75: Delete #address-cells from ssp3
+		ARM: dts: mmp2: Add #power-domain-cells to /clocks
+		ARM: dts: mmp2: Extend the MPMU reg range
+		ARM: dts: mmp2: Add Audio SRAM
+		ARM: dts: mmp2: Add DMA nodes
+		ARM: dts: mmp2: Add Audio Clock controller
+		ARM: dts: mmp2: Add SSPA nodes
+		ARM: dts: mmp2-olpc-xo-1-75: Enable audio support
+		ARM: dts: mmp2: Add the GPU
+		ARM: dts: mmp2-olpc-xo-1-75: Enable the GPU
+		ARM: dts: mmp3: Add the GPU
+		ARM: dts: mmp3-dell-ariel: Enable the GPU
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.9-rockchip-dts64-1
+	rockchip/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.9-rockchip-dts32-1
+	patch
+		dt-bindings: arm: amazon: rename al,alpine DT binding to amazon,al
+		arm64: dts: amazon: rename al folder to be amazon
+		dt-bindings: arm: amazon: update maintainers of amazon,al DT bindings
+		dt-bindings: arm: amazon: add missing alpine-v2 DT binding
+		dt-bindings: arm: amazon: add Amazon Annapurna Labs Alpine V3
+		arm64: dts: amazon: add Amazon's Annapurna Labs Alpine v3 support
+	k3/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kristo/linux tags/ti-k3-dt-for-v5.9
+	mvebu/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-dt-5.9-1
+	mvebu/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-dt64-5.9-1
+	amlogic/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-dt-5.9
+	aspeed/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.9-devicetree
+	patch
+		ARM: dts: berlin: Align L2 cache-controller nodename with dtschema
+	meson/dt64-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-3
+	meson/dt64-4
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-4
+	<no branch> (9d56a1c21f1caf52ca4f6f578e98a0503aa8001d)
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-for-5.9-2
+
+arm/drivers
+	drivers/soc-attr
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/soc-attr-updates-5.9
+	drivers/tee-optee-bus
+		git://git.linaro.org/people/jens.wiklander/linux-tee tags/optee-bus-for-v5.9
+	drivers/scmi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scmi-updates-5.9
+	mediatek/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.8-next-soc
+	renesas/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-drivers-for-v5.9-tag1
+	patch
+		firmware: arm_scmi: Use NULL instead of integer 0 for rate pointer
+	tegra/firmware
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-firmware
+	tegra/memory
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-memory
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-soc
+	patch
+		soc: samsung: exynos-regulator-coupler: Add simple voltage coupler for Exynos5800
+	drivers/reset
+		git://git.pengutronix.de/pza/linux tags/reset-for-v5.9
+	imx/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-drivers-5.9
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-drivers-for-5.9
+	mvebu/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-drivers-5.9-1
+	drivers/memory
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/memory-controller-drv-5.9
+	k3/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/drivers_soc_for_5.9
+	drivers/memory-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-5.9-2
+	qcom/drivers-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-drivers-for-5.9-2
+
+arm/defconfig
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-defconfig-for-v5.9-tag1
+	patch
+		arm64: defconfig: enable TSN features for ENETC and similiar hardware
+		arm64: defconfig: enable CONFIG_FSL_ENETC_QOS
+		arm/arm64: defconfig: Update configs to use the new CROS_EC options
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.9-arm-defconfig
+	sunxi/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-config-for-5.9-1
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-defconfig-for-5.9
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-5.9
+	k3/config
+		git://git.kernel.org/pub/scm/linux/kernel/git/kristo/linux tags/ti-k3-config-for-v5.9
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-defconfig-5.9
+
+arm/newsoc
+	patch
+		arm64: Add config for Keem Bay SoC
+		dt-bindings: arm: Add Keem Bay bindings
+		MAINTAINERS: Add maintainers for Keem Bay SoC
+		arm64: dts: keembay: Add device tree for Keem Bay SoC
+		arm64: dts: keembay: Add device tree for Keem Bay EVM board
+		dt-bindings: arm: sparx5: Add documentation for Microchip Sparx5 SoC
+		arm64: sparx5: Add support for Microchip 2xA53 SoC
+		arm64: dts: sparx5: Add basic cpu support
+		arm64: dts: sparx5: Add pinctrl support
+		dt-bindings: clock: sparx5: Add Sparx5 SoC DPLL clock
+		dt-bindings: clock: sparx5: Add bindings include file
+		arm64: dts: sparx5: Add Sparx5 SoC DPLL clock
+		arm64: dts: sparx5: Add i2c devices, i2c muxes
+		dt-bindings: vendor-prefixes: Add mstar vendor prefix
+		dt-bindings: vendor-prefixes: Add sstar vendor prefix
+		dt-bindings: vendor-prefixes: Add 70mai vendor prefix
+		dt-bindings: vendor-prefixes: Add thingy.jp prefix
+		dt-bindings: arm: Add mstar YAML schema
+		ARM: mstar: Add machine for MStar/Sigmastar Armv7 SoCs
+		ARM: mstar: Add binding details for mstar,l3bridge
+		ARM: mstar: Add Armv7 base dtsi
+		ARM: mstar: Add infinity/infinity3 family dtsis
+		ARM: mstar: Add mercury5 series dtsis
+		ARM: mstar: Add dts for msc313(e) based BreadBee boards
+		ARM: mstar: Add dts for 70mai midrive d08
+		ARM: mstar: Fix dts filename for 70mai midrive d08
+		dt-bindings: arm: mstar: Add binding details for mstar, pmsleep
+		dt-bindings: arm: mstar: Move existing MStar binding descriptions
+		ARM: mstar: Add IMI SRAM region
+		ARM: mstar: Adjust IMI size of infinity
+		ARM: mstar: Adjust IMI size for mercury5
+		ARM: mstar: Adjust IMI size for infinity3
+		ARM: mstar: Add PMU
+		ARM: mstar: Add "pmsleep" node to base dtsi
+		ARM: mstar: Add reboot support
+		dt-bindings: mfd: syscon: add compatible string for mstar,msc313-pmsleep
+		dt-bindings: arm: mstar: remove the binding description for mstar,pmsleep
+		ARM: mstar: Correct the compatible string for pmsleep
+
+arm/late
+
+arm/fixes
+
