@@ -6,6 +6,7 @@
 #include <linux/debugfs.h>
 #include <linux/dma-direct.h>
 #include <linux/dma-noncoherent.h>
+#include <linux/dma-contiguous.h>
 #include <linux/init.h>
 #include <linux/genalloc.h>
 #include <linux/set_memory.h>
@@ -68,7 +69,12 @@ static int atomic_pool_expand(struct gen_pool *pool, size_t pool_size,
 
 	do {
 		pool_size = 1 << (PAGE_SHIFT + order);
-		page = alloc_pages(gfp, order);
+
+		if (dev_get_cma_area(NULL))
+			page = dma_alloc_from_contiguous(NULL, 1 << order,
+							 order, false);
+		else
+			page = alloc_pages(gfp, order);
 	} while (!page && order-- > 0);
 	if (!page)
 		goto out;
@@ -112,7 +118,8 @@ remove_mapping:
 	dma_common_free_remap(addr, pool_size);
 #endif
 free_page: __maybe_unused
-	__free_pages(page, order);
+	if (!dma_release_from_contiguous(NULL, page, 1 << order))
+		__free_pages(page, order);
 out:
 	return ret;
 }
