@@ -57,7 +57,8 @@ static inline int __range_ok(unsigned long addr, unsigned long size)
 
 #define access_ok(addr, size)						\
 ({ 									\
-	__range_ok((unsigned long)(addr), (size));			\
+	__chk_user_ptr(addr);						\
+	__range_ok((__force unsigned long)(addr), (size));		\
 })
 
 /*
