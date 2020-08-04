@@ -15,6 +15,7 @@ export CPPFLAGS_boot.lds += -P -C
 export KBUILD_AFLAGS += -mtext-section-literals
 
 boot-y		:= bootstrap.o
+targets		+= $(boot-y) boot.lds
 
 OBJS		:= $(addprefix $(obj)/,$(boot-y))
 
@@ -25,7 +26,7 @@ $(obj)/Image.o: vmlinux.bin $(OBJS)
 		$(OBJS) $@
 
 $(obj)/../Image.elf: $(obj)/Image.o $(obj)/boot.lds
-	$(Q)$(LD) $(KBUILD_LDFLAGS) $(LDFLAGS_vmlinux) \
+	$(Q)$(LD) $(KBUILD_LDFLAGS) \
 		-T $(obj)/boot.lds \
 		--build-id=none \
 		-o $@ $(obj)/Image.o
