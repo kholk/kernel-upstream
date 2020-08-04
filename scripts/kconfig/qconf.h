@@ -180,6 +180,10 @@ public:
 	{
 		return Parent::text(idx);
 	}
+	void setBackground(colIdx idx, const QBrush& brush)
+	{
+		Parent::setBackground(idx, brush);
+	}
 	void setPixmap(colIdx idx, const QIcon &icon)
 	{
 		Parent::setIcon(idx, icon);
