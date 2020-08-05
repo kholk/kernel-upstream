@@ -68,10 +68,6 @@
 #include "md-bitmap.h"
 #include "md-cluster.h"
 
-#ifndef MODULE
-static void autostart_arrays(int part);
-#endif
-
 /* pers_list is a list of registered personalities protected
  * by pers_lock.
  * pers_lock does extra service to protect accesses to
@@ -329,8 +325,6 @@ static struct ctl_table raid_root_table[] = {
 	},
 	{  }
 };
-
-static const struct block_device_operations md_fops;
 
 static int start_readonly;
 
@@ -4388,7 +4382,6 @@ array_state_show(struct mddev *mddev, char *page)
 
 static int do_md_stop(struct mddev *mddev, int ro, struct block_device *bdev);
 static int md_set_readonly(struct mddev *mddev, struct block_device *bdev);
-static int do_md_run(struct mddev *mddev);
 static int restart_array(struct mddev *mddev);
 
 static ssize_t
@@ -6050,7 +6043,7 @@ abort:
 }
 EXPORT_SYMBOL_GPL(md_run);
 
-static int do_md_run(struct mddev *mddev)
+int do_md_run(struct mddev *mddev)
 {
 	int err;
 
@@ -6685,7 +6678,7 @@ static int get_disk_info(struct mddev *mddev, void __user * arg)
 	return 0;
 }
 
-static int add_new_disk(struct mddev *mddev, mdu_disk_info_t *info)
+int md_add_new_disk(struct mddev *mddev, struct mdu_disk_info_s *info)
 {
 	char b[BDEVNAME_SIZE], b2[BDEVNAME_SIZE];
 	struct md_rdev *rdev;
@@ -6731,7 +6724,7 @@ static int add_new_disk(struct mddev *mddev, mdu_disk_info_t *info)
 	}
 
 	/*
-	 * add_new_disk can be used once the array is assembled
+	 * md_add_new_disk can be used once the array is assembled
 	 * to add "hot spares".  They must already have a superblock
 	 * written
 	 */
@@ -6844,7 +6837,7 @@ static int add_new_disk(struct mddev *mddev, mdu_disk_info_t *info)
 		return err;
 	}
 
-	/* otherwise, add_new_disk is only allowed
+	/* otherwise, md_add_new_disk is only allowed
 	 * for major_version==0 superblocks
 	 */
 	if (mddev->major_version != 0) {
@@ -7089,7 +7082,7 @@ static int set_bitmap_file(struct mddev *mddev, int fd)
 }
 
 /*
- * set_array_info is used two different ways
+ * md_set_array_info is used two different ways
  * The original usage is when creating a new array.
  * In this usage, raid_disks is > 0 and it together with
  *  level, size, not_persistent,layout,chunksize determine the
@@ -7101,9 +7094,8 @@ static int set_bitmap_file(struct mddev *mddev, int fd)
  *  The minor and patch _version numbers are also kept incase the
  *  super_block handler wishes to interpret them.
  */
-static int set_array_info(struct mddev *mddev, mdu_array_info_t *info)
+int md_set_array_info(struct mddev *mddev, struct mdu_array_info_s *info)
 {
-
 	if (info->raid_disks == 0) {
 		/* just setting version number for superblock loading */
 		if (info->major_version < 0 ||
@@ -7451,7 +7443,6 @@ static inline bool md_ioctl_valid(unsigned int cmd)
 	case GET_DISK_INFO:
 	case HOT_ADD_DISK:
 	case HOT_REMOVE_DISK:
-	case RAID_AUTORUN:
 	case RAID_VERSION:
 	case RESTART_ARRAY_RW:
 	case RUN_ARRAY:
@@ -7497,13 +7488,6 @@ static int md_ioctl(struct block_device *bdev, fmode_t mode,
 	case RAID_VERSION:
 		err = get_version(argp);
 		goto out;
-
-#ifndef MODULE
-	case RAID_AUTORUN:
-		err = 0;
-		autostart_arrays(arg);
-		goto out;
-#endif
 	default:;
 	}
 
@@ -7602,7 +7586,7 @@ static int md_ioctl(struct block_device *bdev, fmode_t mode,
 			err = -EBUSY;
 			goto unlock;
 		}
-		err = set_array_info(mddev, &info);
+		err = md_set_array_info(mddev, &info);
 		if (err) {
 			pr_warn("md: couldn't set array info. %d\n", err);
 			goto unlock;
@@ -7656,7 +7640,7 @@ static int md_ioctl(struct block_device *bdev, fmode_t mode,
 				/* Need to clear read-only for this */
 				break;
 			else
-				err = add_new_disk(mddev, &info);
+				err = md_add_new_disk(mddev, &info);
 			goto unlock;
 		}
 		break;
@@ -7724,7 +7708,7 @@ static int md_ioctl(struct block_device *bdev, fmode_t mode,
 		if (copy_from_user(&info, argp, sizeof(info)))
 			err = -EFAULT;
 		else
-			err = add_new_disk(mddev, &info);
+			err = md_add_new_disk(mddev, &info);
 		goto unlock;
 	}
 
@@ -7847,7 +7831,7 @@ static unsigned int md_check_events(struct gendisk *disk, unsigned int clearing)
 	return ret;
 }
 
-static const struct block_device_operations md_fops =
+const struct block_device_operations md_fops =
 {
 	.owner		= THIS_MODULE,
 	.submit_bio	= md_submit_bio,
@@ -9746,7 +9730,7 @@ void md_autodetect_dev(dev_t dev)
 	}
 }
 
-static void autostart_arrays(int part)
+void md_autostart_arrays(int part)
 {
 	struct md_rdev *rdev;
 	struct detected_devices_node *node_detected_dev;
