@@ -61,6 +61,7 @@ restart:
 			cursor.dentry = READ_ONCE(mnt->mnt_mountpoint);
 			mnt = parent;
 			cursor.mnt = &mnt->mnt;
+			atomic_long_inc(&mnt->mnt_subtree_notifications);
 		} else {
 			cursor.dentry = cursor.dentry->d_parent;
 		}
@@ -90,19 +91,24 @@ void notify_mount(struct mount *trigger,
 	n.watch.type	= WATCH_TYPE_MOUNT_NOTIFY;
 	n.watch.subtype	= subtype;
 	n.watch.info	= info_flags | watch_sizeof(n);
-	n.triggered_on	= trigger->mnt_id;
+	n.triggered_on	= trigger->mnt_unique_id;
+
+	smp_wmb(); /* See fsinfo_generic_mount_info(). */
 
 	switch (subtype) {
 	case NOTIFY_MOUNT_EXPIRY:
 	case NOTIFY_MOUNT_READONLY:
 	case NOTIFY_MOUNT_SETATTR:
+		atomic_long_inc(&trigger->mnt_attr_changes);
 		break;
 
 	case NOTIFY_MOUNT_NEW_MOUNT:
 	case NOTIFY_MOUNT_UNMOUNT:
 	case NOTIFY_MOUNT_MOVE_FROM:
 	case NOTIFY_MOUNT_MOVE_TO:
-		n.auxiliary_mount	= aux->mnt_id;
+		n.auxiliary_mount = aux->mnt_unique_id;
+		atomic_long_inc(&trigger->mnt_topology_changes);
+		atomic_long_inc(&aux->mnt_topology_changes);
 		break;
 
 	default:

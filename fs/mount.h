@@ -79,7 +79,13 @@ struct mount {
 	int mnt_expiry_mark;		/* true if marked for expiry */
 	struct hlist_head mnt_pins;
 	struct hlist_head mnt_stuck_children;
+#ifdef CONFIG_FSINFO
+	u64	mnt_unique_id;		/* ID unique over lifetime of kernel */
+#endif
 #ifdef CONFIG_MOUNT_NOTIFICATIONS
+	atomic_long_t mnt_topology_changes;	/* Number of topology changes applied */
+	atomic_long_t mnt_attr_changes;		/* Number of attribute changes applied */
+	atomic_long_t mnt_subtree_notifications; /* Number of notifications in subtree */
 	struct watch_list *mnt_watchers; /* Watches on dentries within this mount */
 #endif
 } __randomize_layout;

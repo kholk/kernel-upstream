@@ -15,6 +15,7 @@ struct mount;
 struct shrink_control;
 struct fs_context;
 struct user_namespace;
+struct fsinfo_context;
 
 /*
  * block_dev.c
@@ -60,6 +61,11 @@ extern int __block_write_begin_int(struct page *page, loff_t pos, unsigned len,
 extern void __init chrdev_init(void);
 
 /*
+ * d_path.c
+ */
+extern void get_fs_root_rcu(struct fs_struct *fs, struct path *root);
+
+/*
  * fs_context.c
  */
 extern const struct fs_context_operations legacy_fs_context_ops;
@@ -101,6 +107,15 @@ int path_mount(const char *dev_name, struct path *path,
 		const char *type_page, unsigned long flags, void *data_page);
 int path_umount(struct path *path, int flags);
 
+extern int lookup_mount_object(struct path *, unsigned int, struct path *);
+extern int fsinfo_generic_mount_source(struct path *, struct fsinfo_context *);
+extern int fsinfo_generic_mount_info(struct path *, struct fsinfo_context *);
+extern int fsinfo_generic_mount_topology(struct path *, struct fsinfo_context *);
+extern int fsinfo_generic_mount_point(struct path *, struct fsinfo_context *);
+extern int fsinfo_generic_mount_point_full(struct path *, struct fsinfo_context *);
+extern int fsinfo_generic_mount_children(struct path *, struct fsinfo_context *);
+extern int fsinfo_generic_mount_all(struct path *, struct fsinfo_context *);
+
 /*
  * fs_struct.c
  */
@@ -115,6 +130,7 @@ extern struct file *alloc_empty_file_noaccount(int, const struct cred *);
 /*
  * super.c
  */
+extern atomic64_t vfs_unique_counter;
 extern int reconfigure_super(struct fs_context *);
 extern bool trylock_super(struct super_block *sb);
 extern struct super_block *user_get_super(dev_t);
