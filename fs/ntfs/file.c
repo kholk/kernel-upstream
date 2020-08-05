@@ -2012,7 +2012,6 @@ const struct file_operations ntfs_file_ops = {
 #endif /* NTFS_RW */
 	.mmap		= generic_file_mmap,
 	.open		= ntfs_file_open,
-	.splice_read	= generic_file_splice_read,
 };
 
 const struct inode_operations ntfs_file_inode_ops = {

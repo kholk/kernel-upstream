@@ -1623,7 +1623,7 @@ static int content_release_procfs(struct inode *inode, struct file *filp)
 
 static const struct proc_ops content_proc_ops = {
 	.proc_open	= content_open_procfs,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= content_release_procfs,
 };
@@ -1842,7 +1842,7 @@ static int content_release_pipefs(struct inode *inode, struct file *filp)
 
 const struct file_operations content_file_operations_pipefs = {
 	.open		= content_open_pipefs,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= content_release_pipefs,
 };

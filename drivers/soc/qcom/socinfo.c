@@ -247,7 +247,7 @@ static int qcom_open_##name(struct inode *inode, struct file *file)	\
 									\
 static const struct file_operations qcom_ ##name## _ops = {		\
 	.open = qcom_open_##name,					\
-	.read = seq_read,						\
+	.read_iter = seq_read_iter,						\
 	.llseek = seq_lseek,						\
 	.release = single_release,					\
 }
@@ -323,7 +323,7 @@ static int open_image_##type(struct inode *inode, struct file *file)	  \
 									  \
 static const struct file_operations qcom_image_##type##_ops = {	  \
 	.open = open_image_##type,					  \
-	.read = seq_read,						  \
+	.read_iter = seq_read_iter,						  \
 	.llseek = seq_lseek,						  \
 	.release = single_release,					  \
 }

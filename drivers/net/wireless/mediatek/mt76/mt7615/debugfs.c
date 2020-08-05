@@ -243,7 +243,7 @@ mt7615_ampdu_stat_open(struct inode *inode, struct file *f)
 
 static const struct file_operations fops_ampdu_stat = {
 	.open = mt7615_ampdu_stat_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

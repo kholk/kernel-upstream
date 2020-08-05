@@ -401,7 +401,7 @@ out_err:
 static const struct file_operations gcov_data_fops = {
 	.open		= gcov_seq_open,
 	.release	= gcov_seq_release,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.write		= gcov_seq_write,
 };

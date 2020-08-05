@@ -408,7 +408,7 @@ static int fscache_objlist_release(struct inode *inode, struct file *file)
 
 const struct proc_ops fscache_objlist_proc_ops = {
 	.proc_open	= fscache_objlist_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= fscache_objlist_release,
 };

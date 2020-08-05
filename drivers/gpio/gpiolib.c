@@ -4417,7 +4417,7 @@ static int gpiolib_open(struct inode *inode, struct file *file)
 static const struct file_operations gpiolib_operations = {
 	.owner		= THIS_MODULE,
 	.open		= gpiolib_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };

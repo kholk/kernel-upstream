@@ -653,7 +653,7 @@ static int debug_lockres_release(struct inode *inode, struct file *file)
 static const struct file_operations debug_lockres_fops = {
 	.open =		debug_lockres_open,
 	.release =	debug_lockres_release,
-	.read =		seq_read,
+	.read_iter =		seq_read_iter,
 	.llseek =	seq_lseek,
 };
 /* end - debug lockres funcs */

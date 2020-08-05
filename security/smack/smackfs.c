@@ -671,7 +671,7 @@ static ssize_t smk_write_load(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_load_ops = {
 	.open           = smk_open_load,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_load,
 	.release        = seq_release,
@@ -948,7 +948,7 @@ static ssize_t smk_write_cipso(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_cipso_ops = {
 	.open           = smk_open_cipso,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_cipso,
 	.release        = seq_release,
@@ -1022,7 +1022,7 @@ static ssize_t smk_write_cipso2(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_cipso2_ops = {
 	.open           = smk_open_cipso2,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_cipso2,
 	.release        = seq_release,
@@ -1287,7 +1287,7 @@ free_data_out:
 
 static const struct file_operations smk_net4addr_ops = {
 	.open           = smk_open_net4addr,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_net4addr,
 	.release        = seq_release,
@@ -1544,7 +1544,7 @@ free_data_out:
 
 static const struct file_operations smk_net6addr_ops = {
 	.open           = smk_open_net6addr,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_net6addr,
 	.release        = seq_release,
@@ -2032,7 +2032,7 @@ static ssize_t smk_write_onlycap(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_onlycap_ops = {
 	.open		= smk_open_onlycap,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= smk_write_onlycap,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
@@ -2256,7 +2256,7 @@ static ssize_t smk_write_load_self(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_load_self_ops = {
 	.open           = smk_open_load_self,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_load_self,
 	.release        = seq_release,
@@ -2390,7 +2390,7 @@ static ssize_t smk_write_load2(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_load2_ops = {
 	.open           = smk_open_load2,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_load2,
 	.release        = seq_release,
@@ -2463,7 +2463,7 @@ static ssize_t smk_write_load_self2(struct file *file, const char __user *buf,
 
 static const struct file_operations smk_load_self2_ops = {
 	.open           = smk_open_load_self2,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek         = seq_lseek,
 	.write		= smk_write_load_self2,
 	.release        = seq_release,
@@ -2769,7 +2769,7 @@ out:
 
 static const struct file_operations smk_relabel_self_ops = {
 	.open		= smk_open_relabel_self,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.write		= smk_write_relabel_self,
 	.release	= seq_release,

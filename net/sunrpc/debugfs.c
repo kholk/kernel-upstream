@@ -112,7 +112,7 @@ tasks_release(struct inode *inode, struct file *filp)
 static const struct file_operations tasks_fops = {
 	.owner		= THIS_MODULE,
 	.open		= tasks_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= tasks_release,
 };
@@ -211,7 +211,7 @@ xprt_info_release(struct inode *inode, struct file *filp)
 static const struct file_operations xprt_info_fops = {
 	.owner		= THIS_MODULE,
 	.open		= xprt_info_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= xprt_info_release,
 };

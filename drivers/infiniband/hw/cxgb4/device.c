@@ -191,7 +191,7 @@ static const struct file_operations wr_log_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = wr_log_open,
 	.release = single_release,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.write   = wr_log_clear,
 };
@@ -550,7 +550,7 @@ static const struct file_operations stats_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = stats_open,
 	.release = single_release,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.write   = stats_clear,
 };

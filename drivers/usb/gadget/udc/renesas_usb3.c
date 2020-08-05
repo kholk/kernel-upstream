@@ -2543,7 +2543,7 @@ static ssize_t renesas_usb3_b_device_write(struct file *file,
 static const struct file_operations renesas_usb3_b_device_fops = {
 	.open = renesas_usb3_b_device_open,
 	.write = renesas_usb3_b_device_write,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

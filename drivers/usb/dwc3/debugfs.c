@@ -380,7 +380,7 @@ static ssize_t dwc3_lsp_write(struct file *file, const char __user *ubuf,
 static const struct file_operations dwc3_lsp_fops = {
 	.open			= dwc3_lsp_open,
 	.write			= dwc3_lsp_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };
@@ -445,7 +445,7 @@ static ssize_t dwc3_mode_write(struct file *file,
 static const struct file_operations dwc3_mode_fops = {
 	.open			= dwc3_mode_open,
 	.write			= dwc3_mode_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };
@@ -528,7 +528,7 @@ static ssize_t dwc3_testmode_write(struct file *file,
 static const struct file_operations dwc3_testmode_fops = {
 	.open			= dwc3_testmode_open,
 	.write			= dwc3_testmode_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };
@@ -620,7 +620,7 @@ static ssize_t dwc3_link_state_write(struct file *file,
 static const struct file_operations dwc3_link_state_fops = {
 	.open			= dwc3_link_state_open,
 	.write			= dwc3_link_state_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };

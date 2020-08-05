@@ -26,7 +26,7 @@ static int bootrom_open(struct inode *inode, struct file *file)
 
 static const struct file_operations bootrom_file_ops = {
 	.open		= bootrom_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

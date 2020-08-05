@@ -188,7 +188,7 @@ static const struct attribute_group *aoe_attr_groups[] = {
 
 static const struct file_operations aoe_debugfs_fops = {
 	.open = aoe_debugfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

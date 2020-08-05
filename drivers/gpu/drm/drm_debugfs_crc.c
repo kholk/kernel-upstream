@@ -167,7 +167,7 @@ static ssize_t crc_control_write(struct file *file, const char __user *ubuf,
 static const struct file_operations drm_crtc_crc_control_fops = {
 	.owner = THIS_MODULE,
 	.open = crc_control_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.write = crc_control_write

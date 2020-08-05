@@ -542,7 +542,7 @@ static ssize_t malidp_debugfs_write(struct file *file, const char __user *ubuf,
 static const struct file_operations malidp_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.open = malidp_debugfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = malidp_debugfs_write,
 	.llseek = seq_lseek,
 	.release = single_release,

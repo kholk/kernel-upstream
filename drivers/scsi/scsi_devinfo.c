@@ -739,7 +739,7 @@ out:
 
 static const struct proc_ops scsi_devinfo_proc_ops = {
 	.proc_open	= proc_scsi_devinfo_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= proc_scsi_devinfo_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,

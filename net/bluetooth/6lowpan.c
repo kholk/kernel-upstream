@@ -1210,7 +1210,7 @@ static int lowpan_control_open(struct inode *inode, struct file *file)
 
 static const struct file_operations lowpan_control_fops = {
 	.open		= lowpan_control_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= lowpan_control_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,

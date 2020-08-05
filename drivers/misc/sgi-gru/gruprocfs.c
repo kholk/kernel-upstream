@@ -257,7 +257,7 @@ static int options_open(struct inode *inode, struct file *file)
 /* *INDENT-OFF* */
 static const struct proc_ops statistics_proc_ops = {
 	.proc_open	= statistics_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= statistics_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
@@ -265,7 +265,7 @@ static const struct proc_ops statistics_proc_ops = {
 
 static const struct proc_ops mcs_statistics_proc_ops = {
 	.proc_open	= mcs_statistics_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= mcs_statistics_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
@@ -273,7 +273,7 @@ static const struct proc_ops mcs_statistics_proc_ops = {
 
 static const struct proc_ops options_proc_ops = {
 	.proc_open	= options_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= options_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,

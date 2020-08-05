@@ -311,7 +311,7 @@ static int bpffs_map_release(struct inode *inode, struct file *file)
  */
 static const struct file_operations bpffs_map_fops = {
 	.open		= bpffs_map_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.release	= bpffs_map_release,
 };
 

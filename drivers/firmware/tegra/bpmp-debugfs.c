@@ -647,7 +647,7 @@ free_namebuf:
 
 static const struct file_operations debugfs_fops = {
 	.open		= debugfs_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.write		= debugfs_store,
 	.release	= single_release,

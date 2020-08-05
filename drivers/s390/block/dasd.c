@@ -1089,7 +1089,7 @@ static int dasd_stats_open(struct inode *inode, struct file *file)
 static const struct file_operations dasd_stats_raw_fops = {
 	.owner		= THIS_MODULE,
 	.open		= dasd_stats_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 	.write		= dasd_stats_write,

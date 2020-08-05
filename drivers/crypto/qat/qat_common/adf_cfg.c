@@ -66,7 +66,7 @@ static int qat_dev_cfg_open(struct inode *inode, struct file *file)
 
 static const struct file_operations qat_dev_cfg_fops = {
 	.open = qat_dev_cfg_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release
 };

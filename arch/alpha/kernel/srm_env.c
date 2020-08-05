@@ -121,7 +121,7 @@ static ssize_t srm_env_proc_write(struct file *file, const char __user *buffer,
 
 static const struct proc_ops srm_env_proc_ops = {
 	.proc_open	= srm_env_proc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
 	.proc_write	= srm_env_proc_write,

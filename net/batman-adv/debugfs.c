@@ -204,7 +204,7 @@ struct batadv_debuginfo batadv_debuginfo_##_name = {	\
 	.fops = {					\
 		.owner = THIS_MODULE,			\
 		.open = _open,				\
-		.read	= seq_read,			\
+		.read_iter	= seq_read_iter,			\
 		.llseek = seq_lseek,			\
 		.release = single_release,		\
 	},						\
@@ -272,7 +272,7 @@ struct batadv_debuginfo batadv_hardif_debuginfo_##_name = {	\
 	.fops = {						\
 		.owner = THIS_MODULE,				\
 		.open = _open,					\
-		.read	= seq_read,				\
+		.read_iter	= seq_read_iter,				\
 		.llseek = seq_lseek,				\
 		.release = single_release,			\
 	},							\

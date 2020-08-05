@@ -337,7 +337,7 @@ debugfs_write(struct file *file, const char __user *buf, size_t count, loff_t *o
 
 static const struct file_operations debugfs_ops =
 {
-	.read	 = seq_read,
+	.read_iter	 = seq_read_iter,
 	.open	 = debugfs_open,
 	.write	 = debugfs_write,
 	.release = single_release

@@ -360,7 +360,7 @@ ftrace_formats_open(struct inode *inode, struct file *file)
 
 static const struct file_operations ftrace_formats_fops = {
 	.open = ftrace_formats_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };

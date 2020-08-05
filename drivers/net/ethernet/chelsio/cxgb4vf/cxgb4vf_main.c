@@ -2039,7 +2039,7 @@ static int mboxlog_open(struct inode *inode, struct file *file)
 static const struct file_operations mboxlog_fops = {
 	.owner   = THIS_MODULE,
 	.open    = mboxlog_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };
@@ -2192,7 +2192,7 @@ static int sge_qinfo_open(struct inode *inode, struct file *file)
 static const struct file_operations sge_qinfo_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = sge_qinfo_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };
@@ -2338,7 +2338,7 @@ static int sge_qstats_open(struct inode *inode, struct file *file)
 static const struct file_operations sge_qstats_proc_fops = {
 	.owner   = THIS_MODULE,
 	.open    = sge_qstats_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };
@@ -2436,7 +2436,7 @@ static int interfaces_open(struct inode *inode, struct file *file)
 static const struct file_operations interfaces_proc_fops = {
 	.owner   = THIS_MODULE,
 	.open    = interfaces_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };

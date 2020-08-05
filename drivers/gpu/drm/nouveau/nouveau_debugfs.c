@@ -205,7 +205,7 @@ nouveau_debugfs_pstate_open(struct inode *inode, struct file *file)
 static const struct file_operations nouveau_pstate_fops = {
 	.owner = THIS_MODULE,
 	.open = nouveau_debugfs_pstate_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = nouveau_debugfs_pstate_set,
 };
 

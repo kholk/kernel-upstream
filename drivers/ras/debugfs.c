@@ -32,7 +32,7 @@ static int trace_release(struct inode *inode, struct file *file)
 
 static const struct file_operations trace_fops = {
 	.open    = trace_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = trace_release,
 };

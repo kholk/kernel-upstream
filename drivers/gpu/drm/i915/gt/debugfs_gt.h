@@ -18,7 +18,7 @@ struct intel_gt;
 static const struct file_operations __name ## _fops = {			\
 	.owner = THIS_MODULE,						\
 	.open = __name ## _open,					\
-	.read = seq_read,						\
+	.read_iter = seq_read_iter,						\
 	.llseek = seq_lseek,						\
 	.release = single_release,					\
 }

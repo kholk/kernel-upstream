@@ -426,7 +426,7 @@ static const struct proc_ops snd_info_text_entry_ops =
 	.proc_release	= snd_info_text_entry_release,
 	.proc_write	= snd_info_text_entry_write,
 	.proc_lseek	= seq_lseek,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 };
 
 static struct snd_info_entry *create_subdir(struct module *mod,

@@ -249,7 +249,7 @@ static int open_debug_level(struct inode *inode, struct file *file)
 
 static const struct proc_ops debug_level_proc_ops = {
 	.proc_open	= open_debug_level,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= write_debug_level,
 	.proc_release	= single_release,

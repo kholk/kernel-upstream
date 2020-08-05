@@ -699,7 +699,7 @@ static int lparcfg_open(struct inode *inode, struct file *file)
 }
 
 static const struct proc_ops lparcfg_proc_ops = {
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= lparcfg_write,
 	.proc_open	= lparcfg_open,
 	.proc_release	= single_release,

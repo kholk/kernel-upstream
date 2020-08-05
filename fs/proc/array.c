@@ -768,7 +768,7 @@ static int children_seq_open(struct inode *inode, struct file *file)
 
 const struct file_operations proc_tid_children_operations = {
 	.open    = children_seq_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };

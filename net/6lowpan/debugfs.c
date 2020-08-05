@@ -157,7 +157,7 @@ out:
 
 static const struct file_operations lowpan_ctx_pfx_fops = {
 	.open		= lowpan_ctx_pfx_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= lowpan_ctx_pfx_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,

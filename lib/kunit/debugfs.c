@@ -84,7 +84,7 @@ static int debugfs_results_open(struct inode *inode, struct file *file)
 
 static const struct file_operations debugfs_results_fops = {
 	.open = debugfs_results_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = debugfs_release,
 };

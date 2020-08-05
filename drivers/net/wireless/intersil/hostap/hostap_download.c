@@ -234,7 +234,7 @@ static int prism2_download_aux_dump_proc_open(struct inode *inode, struct file *
 
 static const struct proc_ops prism2_download_aux_dump_proc_ops = {
 	.proc_open		= prism2_download_aux_dump_proc_open,
-	.proc_read		= seq_read,
+	.proc_read_iter		= seq_read_iter,
 	.proc_lseek		= seq_lseek,
 	.proc_release		= seq_release_private,
 };

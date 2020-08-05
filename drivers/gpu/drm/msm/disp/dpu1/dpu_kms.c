@@ -94,7 +94,7 @@ static const struct file_operations __prefix ## _fops = {		\
 	.owner = THIS_MODULE,						\
 	.open = __prefix ## _open,					\
 	.release = single_release,					\
-	.read = seq_read,						\
+	.read_iter = seq_read_iter,						\
 	.llseek = seq_lseek,						\
 }
 
@@ -163,7 +163,7 @@ static int dpu_debugfs_open_regset32(struct inode *inode,
 
 static const struct file_operations dpu_fops_regset32 = {
 	.open =		dpu_debugfs_open_regset32,
-	.read =		seq_read,
+	.read_iter =		seq_read_iter,
 	.llseek =	seq_lseek,
 	.release =	single_release,
 };

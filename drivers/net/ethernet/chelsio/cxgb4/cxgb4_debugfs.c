@@ -229,7 +229,7 @@ static int cim_la_open(struct inode *inode, struct file *file)
 static const struct file_operations cim_la_fops = {
 	.owner   = THIS_MODULE,
 	.open    = cim_la_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -272,7 +272,7 @@ static int cim_pif_la_open(struct inode *inode, struct file *file)
 static const struct file_operations cim_pif_la_fops = {
 	.owner   = THIS_MODULE,
 	.open    = cim_pif_la_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -318,7 +318,7 @@ static int cim_ma_la_open(struct inode *inode, struct file *file)
 static const struct file_operations cim_ma_la_fops = {
 	.owner   = THIS_MODULE,
 	.open    = cim_ma_la_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -411,7 +411,7 @@ static int cim_ibq_open(struct inode *inode, struct file *file)
 static const struct file_operations cim_ibq_fops = {
 	.owner   = THIS_MODULE,
 	.open    = cim_ibq_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -440,7 +440,7 @@ static int cim_obq_open(struct inode *inode, struct file *file)
 static const struct file_operations cim_obq_fops = {
 	.owner   = THIS_MODULE,
 	.open    = cim_obq_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -686,7 +686,7 @@ static ssize_t tp_la_write(struct file *file, const char __user *buf,
 static const struct file_operations tp_la_fops = {
 	.owner   = THIS_MODULE,
 	.open    = tp_la_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private,
 	.write   = tp_la_write
@@ -722,7 +722,7 @@ static int ulprx_la_open(struct inode *inode, struct file *file)
 static const struct file_operations ulprx_la_fops = {
 	.owner   = THIS_MODULE,
 	.open    = ulprx_la_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -812,7 +812,7 @@ static ssize_t pm_stats_clear(struct file *file, const char __user *buf,
 static const struct file_operations pm_stats_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = pm_stats_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = single_release,
 	.write   = pm_stats_clear
@@ -1136,7 +1136,7 @@ static int devlog_open(struct inode *inode, struct file *file)
 static const struct file_operations devlog_fops = {
 	.owner   = THIS_MODULE,
 	.open    = devlog_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -1234,7 +1234,7 @@ static int mboxlog_open(struct inode *inode, struct file *file)
 static const struct file_operations mboxlog_fops = {
 	.owner   = THIS_MODULE,
 	.open    = mboxlog_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };
@@ -1317,7 +1317,7 @@ static ssize_t mbox_write(struct file *file, const char __user *buf,
 static const struct file_operations mbox_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = mbox_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = single_release,
 	.write   = mbox_write
@@ -1610,7 +1610,7 @@ out:
 static const struct file_operations mps_trc_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = mps_trc_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = single_release,
 	.write   = mps_trc_write
@@ -1930,7 +1930,7 @@ static int mps_tcam_open(struct inode *inode, struct file *file)
 static const struct file_operations mps_tcam_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = mps_tcam_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };
@@ -2007,7 +2007,7 @@ static int rss_open(struct inode *inode, struct file *file)
 static const struct file_operations rss_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = rss_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -2226,7 +2226,7 @@ static ssize_t rss_key_write(struct file *file, const char __user *buf,
 static const struct file_operations rss_key_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = rss_key_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = single_release,
 	.write   = rss_key_write
@@ -2310,7 +2310,7 @@ static int rss_pf_config_open(struct inode *inode, struct file *file)
 static const struct file_operations rss_pf_config_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = rss_pf_config_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -2373,7 +2373,7 @@ static int rss_vf_config_open(struct inode *inode, struct file *file)
 static const struct file_operations rss_vf_config_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = rss_vf_config_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release_private
 };
@@ -2561,7 +2561,7 @@ static int dcb_info_open(struct inode *inode, struct file *file)
 static const struct file_operations dcb_info_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = dcb_info_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };
@@ -3245,7 +3245,7 @@ static int sge_qinfo_open(struct inode *inode, struct file *file)
 static const struct file_operations sge_qinfo_debugfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = sge_qinfo_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };

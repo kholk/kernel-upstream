@@ -1015,7 +1015,7 @@ static int aa_sfs_seq_open(struct inode *inode, struct file *file)
 const struct file_operations aa_sfs_seq_file_ops = {
 	.owner		= THIS_MODULE,
 	.open		= aa_sfs_seq_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -1034,7 +1034,7 @@ static int seq_profile_ ##NAME ##_open(struct inode *inode, struct file *file)\
 static const struct file_operations seq_profile_ ##NAME ##_fops = {	      \
 	.owner		= THIS_MODULE,					      \
 	.open		= seq_profile_ ##NAME ##_open,			      \
-	.read		= seq_read,					      \
+	.read_iter		= seq_read_iter,					      \
 	.llseek		= seq_lseek,					      \
 	.release	= seq_profile_release,				      \
 }									      \
@@ -1136,7 +1136,7 @@ static int seq_ns_ ##NAME ##_open(struct inode *inode, struct file *file)     \
 static const struct file_operations seq_ns_ ##NAME ##_fops = {	      \
 	.owner		= THIS_MODULE,					      \
 	.open		= seq_ns_ ##NAME ##_open,			      \
-	.read		= seq_read,					      \
+	.read_iter		= seq_read_iter,					      \
 	.llseek		= seq_lseek,					      \
 	.release	= single_release,				      \
 }									      \
@@ -1212,7 +1212,7 @@ static int seq_rawdata_ ##NAME ##_open(struct inode *inode, struct file *file)\
 static const struct file_operations seq_rawdata_ ##NAME ##_fops = {	      \
 	.owner		= THIS_MODULE,					      \
 	.open		= seq_rawdata_ ##NAME ##_open,			      \
-	.read		= seq_read,					      \
+	.read_iter		= seq_read_iter,					      \
 	.llseek		= seq_lseek,					      \
 	.release	= seq_rawdata_release,				      \
 }									      \
@@ -2280,7 +2280,7 @@ static int profiles_release(struct inode *inode, struct file *file)
 
 static const struct file_operations aa_sfs_profiles_fops = {
 	.open = profiles_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = profiles_release,
 };

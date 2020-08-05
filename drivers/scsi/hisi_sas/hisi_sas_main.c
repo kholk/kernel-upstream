@@ -2878,7 +2878,7 @@ static int hisi_sas_debugfs_global_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_global_fops = {
 	.open = hisi_sas_debugfs_global_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -2905,7 +2905,7 @@ static int hisi_sas_debugfs_axi_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_axi_fops = {
 	.open = hisi_sas_debugfs_axi_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -2932,7 +2932,7 @@ static int hisi_sas_debugfs_ras_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_ras_fops = {
 	.open = hisi_sas_debugfs_ras_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -2958,7 +2958,7 @@ static int hisi_sas_debugfs_port_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_port_fops = {
 	.open = hisi_sas_debugfs_port_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3026,7 +3026,7 @@ static int hisi_sas_debugfs_cq_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_cq_fops = {
 	.open = hisi_sas_debugfs_cq_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3059,7 +3059,7 @@ static int hisi_sas_debugfs_dq_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_dq_fops = {
 	.open = hisi_sas_debugfs_dq_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3087,7 +3087,7 @@ static int hisi_sas_debugfs_iost_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_iost_fops = {
 	.open = hisi_sas_debugfs_iost_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3126,7 +3126,7 @@ static int hisi_sas_debugfs_iost_cache_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_iost_cache_fops = {
 	.open = hisi_sas_debugfs_iost_cache_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3154,7 +3154,7 @@ static int hisi_sas_debugfs_itct_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations hisi_sas_debugfs_itct_fops = {
 	.open = hisi_sas_debugfs_itct_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3193,7 +3193,7 @@ static int hisi_sas_debugfs_itct_cache_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_itct_cache_fops = {
 	.open = hisi_sas_debugfs_itct_cache_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.owner = THIS_MODULE,
@@ -3422,7 +3422,7 @@ static int hisi_sas_debugfs_bist_linkrate_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_bist_linkrate_ops = {
 	.open = hisi_sas_debugfs_bist_linkrate_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = hisi_sas_debugfs_bist_linkrate_write,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -3512,7 +3512,7 @@ static int hisi_sas_debugfs_bist_code_mode_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_bist_code_mode_ops = {
 	.open = hisi_sas_debugfs_bist_code_mode_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = hisi_sas_debugfs_bist_code_mode_write,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -3561,7 +3561,7 @@ static int hisi_sas_debugfs_bist_phy_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_bist_phy_ops = {
 	.open = hisi_sas_debugfs_bist_phy_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = hisi_sas_debugfs_bist_phy_write,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -3640,7 +3640,7 @@ static int hisi_sas_debugfs_bist_mode_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_bist_mode_ops = {
 	.open = hisi_sas_debugfs_bist_mode_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = hisi_sas_debugfs_bist_mode_write,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -3696,7 +3696,7 @@ static int hisi_sas_debugfs_bist_enable_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_bist_enable_ops = {
 	.open = hisi_sas_debugfs_bist_enable_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = hisi_sas_debugfs_bist_enable_write,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -3742,7 +3742,7 @@ static int hisi_sas_debugfs_phy_down_cnt_open(struct inode *inode,
 
 static const struct file_operations hisi_sas_debugfs_phy_down_cnt_ops = {
 	.open = hisi_sas_debugfs_phy_down_cnt_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = hisi_sas_debugfs_phy_down_cnt_write,
 	.llseek = seq_lseek,
 	.release = single_release,

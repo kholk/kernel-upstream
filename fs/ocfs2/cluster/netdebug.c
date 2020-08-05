@@ -186,7 +186,7 @@ static int nst_fop_release(struct inode *inode, struct file *file)
 
 static const struct file_operations nst_seq_fops = {
 	.open = nst_fop_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = nst_fop_release,
 };
@@ -418,7 +418,7 @@ static int stats_fop_open(struct inode *inode, struct file *file)
 
 static const struct file_operations stats_seq_fops = {
 	.open = stats_fop_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = sc_fop_release,
 };
@@ -430,7 +430,7 @@ static int sc_fop_open(struct inode *inode, struct file *file)
 
 static const struct file_operations sc_seq_fops = {
 	.open = sc_fop_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = sc_fop_release,
 };

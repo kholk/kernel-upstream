@@ -1172,7 +1172,7 @@ static int wakeup_sources_stats_open(struct inode *inode, struct file *file)
 static const struct file_operations wakeup_sources_stats_fops = {
 	.owner = THIS_MODULE,
 	.open = wakeup_sources_stats_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release_private,
 };

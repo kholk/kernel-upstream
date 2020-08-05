@@ -1069,7 +1069,7 @@ static int tegra_emc_debug_available_rates_open(struct inode *inode,
 
 static const struct file_operations tegra_emc_debug_available_rates_fops = {
 	.open = tegra_emc_debug_available_rates_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

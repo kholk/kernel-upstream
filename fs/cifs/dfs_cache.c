@@ -215,7 +215,7 @@ static int dfscache_proc_open(struct inode *inode, struct file *file)
 
 const struct proc_ops dfscache_proc_ops = {
 	.proc_open	= dfscache_proc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
 	.proc_write	= dfscache_proc_write,

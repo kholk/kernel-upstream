@@ -806,7 +806,7 @@ static ssize_t clusterip_proc_write(struct file *file, const char __user *input,
 
 static const struct proc_ops clusterip_proc_ops = {
 	.proc_open	= clusterip_proc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= clusterip_proc_write,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= clusterip_proc_release,

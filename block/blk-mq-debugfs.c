@@ -772,7 +772,7 @@ static int blk_mq_debugfs_release(struct inode *inode, struct file *file)
 
 static const struct file_operations blk_mq_debugfs_fops = {
 	.open		= blk_mq_debugfs_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.write		= blk_mq_debugfs_write,
 	.llseek		= seq_lseek,
 	.release	= blk_mq_debugfs_release,

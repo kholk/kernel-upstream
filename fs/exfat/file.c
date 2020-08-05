@@ -372,7 +372,6 @@ const struct file_operations exfat_file_operations = {
 	.write_iter	= generic_file_write_iter,
 	.mmap		= generic_file_mmap,
 	.fsync		= exfat_file_fsync,
-	.splice_read	= generic_file_splice_read,
 	.splice_write	= iter_file_splice_write,
 };
 

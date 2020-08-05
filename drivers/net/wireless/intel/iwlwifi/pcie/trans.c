@@ -2947,7 +2947,7 @@ DEBUGFS_READ_WRITE_FILE_OPS(rfkill);
 static const struct file_operations iwl_dbgfs_tx_queue_ops = {
 	.owner = THIS_MODULE,
 	.open = iwl_dbgfs_tx_queue_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release_private,
 };

@@ -444,7 +444,7 @@ static ssize_t prof_cpu_mask_proc_write(struct file *file,
 
 static const struct proc_ops prof_cpu_mask_proc_ops = {
 	.proc_open	= prof_cpu_mask_proc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,
 	.proc_write	= prof_cpu_mask_proc_write,

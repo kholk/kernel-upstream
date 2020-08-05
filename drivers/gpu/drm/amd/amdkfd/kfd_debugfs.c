@@ -69,7 +69,7 @@ out:
 static const struct file_operations kfd_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.open = kfd_debugfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -77,7 +77,7 @@ static const struct file_operations kfd_debugfs_fops = {
 static const struct file_operations kfd_debugfs_hang_hws_fops = {
 	.owner = THIS_MODULE,
 	.open = kfd_debugfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = kfd_debugfs_hang_hws_write,
 	.llseek = seq_lseek,
 	.release = single_release,

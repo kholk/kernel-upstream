@@ -199,7 +199,7 @@ static int ima_measurements_open(struct inode *inode, struct file *file)
 
 static const struct file_operations ima_measurements_ops = {
 	.open = ima_measurements_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };
@@ -265,7 +265,7 @@ static int ima_ascii_measurements_open(struct inode *inode, struct file *file)
 
 static const struct file_operations ima_ascii_measurements_ops = {
 	.open = ima_ascii_measurements_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };
@@ -441,7 +441,7 @@ static int ima_release_policy(struct inode *inode, struct file *file)
 static const struct file_operations ima_measure_policy_ops = {
 	.open = ima_open_policy,
 	.write = ima_write_policy,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.release = ima_release_policy,
 	.llseek = generic_file_llseek,
 };

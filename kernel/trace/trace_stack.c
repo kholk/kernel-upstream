@@ -487,7 +487,7 @@ static int stack_trace_open(struct inode *inode, struct file *file)
 
 static const struct file_operations stack_trace_fops = {
 	.open		= stack_trace_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
@@ -506,7 +506,7 @@ stack_trace_filter_open(struct inode *inode, struct file *file)
 
 static const struct file_operations stack_trace_filter_fops = {
 	.open = stack_trace_filter_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = ftrace_filter_write,
 	.llseek = tracing_lseek,
 	.release = ftrace_regex_release,

@@ -48,7 +48,7 @@ static ssize_t i915_param_int_write(struct file *file,
 static const struct file_operations i915_param_int_fops = {
 	.owner = THIS_MODULE,
 	.open = i915_param_int_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = i915_param_int_write,
 	.llseek = default_llseek,
 	.release = single_release,
@@ -57,7 +57,7 @@ static const struct file_operations i915_param_int_fops = {
 static const struct file_operations i915_param_int_fops_ro = {
 	.owner = THIS_MODULE,
 	.open = i915_param_int_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = default_llseek,
 	.release = single_release,
 };
@@ -101,7 +101,7 @@ static ssize_t i915_param_uint_write(struct file *file,
 static const struct file_operations i915_param_uint_fops = {
 	.owner = THIS_MODULE,
 	.open = i915_param_uint_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = i915_param_uint_write,
 	.llseek = default_llseek,
 	.release = single_release,
@@ -110,7 +110,7 @@ static const struct file_operations i915_param_uint_fops = {
 static const struct file_operations i915_param_uint_fops_ro = {
 	.owner = THIS_MODULE,
 	.open = i915_param_uint_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = default_llseek,
 	.release = single_release,
 };
@@ -155,7 +155,7 @@ out:
 static const struct file_operations i915_param_charp_fops = {
 	.owner = THIS_MODULE,
 	.open = i915_param_charp_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = i915_param_charp_write,
 	.llseek = default_llseek,
 	.release = single_release,
@@ -164,7 +164,7 @@ static const struct file_operations i915_param_charp_fops = {
 static const struct file_operations i915_param_charp_fops_ro = {
 	.owner = THIS_MODULE,
 	.open = i915_param_charp_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = default_llseek,
 	.release = single_release,
 };

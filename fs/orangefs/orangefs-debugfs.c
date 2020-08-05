@@ -116,7 +116,7 @@ static const struct seq_operations help_debug_ops = {
 static const struct file_operations debug_help_fops = {
 	.owner		= THIS_MODULE,
 	.open           = orangefs_debug_help_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.release        = seq_release,
 	.llseek         = seq_lseek,
 };

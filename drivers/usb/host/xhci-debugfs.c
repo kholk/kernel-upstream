@@ -249,7 +249,7 @@ static int xhci_ring_open(struct inode *inode, struct file *file)
 
 static const struct file_operations xhci_ring_fops = {
 	.open			= xhci_ring_open,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };
@@ -330,7 +330,7 @@ static int xhci_context_open(struct inode *inode, struct file *file)
 
 static const struct file_operations xhci_context_fops = {
 	.open			= xhci_context_open,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };
@@ -391,7 +391,7 @@ static ssize_t xhci_port_write(struct file *file,  const char __user *ubuf,
 static const struct file_operations port_fops = {
 	.open			= xhci_port_open,
 	.write                  = xhci_port_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };

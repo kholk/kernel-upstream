@@ -209,7 +209,7 @@ static const struct file_operations debugfs_cram_fops = {
 static const struct file_operations debugfs_stats_fops = {
 	.owner		= THIS_MODULE,
 	.open		= rsxx_attr_stats_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -217,7 +217,7 @@ static const struct file_operations debugfs_stats_fops = {
 static const struct file_operations debugfs_pci_regs_fops = {
 	.owner		= THIS_MODULE,
 	.open		= rsxx_attr_pci_regs_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

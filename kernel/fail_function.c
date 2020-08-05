@@ -314,7 +314,7 @@ out:
 
 static const struct file_operations fei_ops = {
 	.open =		fei_open,
-	.read =		seq_read,
+	.read_iter =		seq_read_iter,
 	.write =	fei_write,
 	.llseek =	seq_lseek,
 	.release =	seq_release,

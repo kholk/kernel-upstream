@@ -756,7 +756,7 @@ static int l2t_seq_open(struct inode *inode, struct file *file)
 const struct file_operations t4_l2t_fops = {
 	.owner = THIS_MODULE,
 	.open = l2t_seq_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };

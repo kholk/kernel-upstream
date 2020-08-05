@@ -2328,7 +2328,7 @@ static ssize_t sg_proc_write_adio(struct file *filp, const char __user *buffer,
 			          size_t count, loff_t *off);
 static const struct proc_ops adio_proc_ops = {
 	.proc_open	= sg_proc_single_open_adio,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= sg_proc_write_adio,
 	.proc_release	= single_release,
@@ -2339,7 +2339,7 @@ static ssize_t sg_proc_write_dressz(struct file *filp,
 		const char __user *buffer, size_t count, loff_t *off);
 static const struct proc_ops dressz_proc_ops = {
 	.proc_open	= sg_proc_single_open_dressz,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_write	= sg_proc_write_dressz,
 	.proc_release	= single_release,

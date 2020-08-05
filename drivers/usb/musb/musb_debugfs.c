@@ -224,7 +224,7 @@ ret:
 static const struct file_operations musb_test_mode_fops = {
 	.open			= musb_test_mode_open,
 	.write			= musb_test_mode_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };
@@ -316,7 +316,7 @@ static ssize_t musb_softconnect_write(struct file *file,
 static const struct file_operations musb_softconnect_fops = {
 	.open			= musb_softconnect_open,
 	.write			= musb_softconnect_write,
-	.read			= seq_read,
+	.read_iter			= seq_read_iter,
 	.llseek			= seq_lseek,
 	.release		= single_release,
 };

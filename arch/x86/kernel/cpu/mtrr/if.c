@@ -398,7 +398,7 @@ static int mtrr_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops mtrr_proc_ops = {
 	.proc_open		= mtrr_open,
-	.proc_read		= seq_read,
+	.proc_read_iter		= seq_read_iter,
 	.proc_lseek		= seq_lseek,
 	.proc_write		= mtrr_write,
 	.proc_ioctl		= mtrr_ioctl,

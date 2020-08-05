@@ -231,7 +231,7 @@ mt7915_tx_stats_open(struct inode *inode, struct file *f)
 
 static const struct file_operations fops_tx_stats = {
 	.open = mt7915_tx_stats_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -458,7 +458,7 @@ mt7915_sta_stats_open(struct inode *inode, struct file *f)
 
 static const struct file_operations fops_sta_stats = {
 	.open = mt7915_sta_stats_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

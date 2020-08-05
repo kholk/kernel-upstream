@@ -1200,7 +1200,7 @@ static int memtype_seq_open(struct inode *inode, struct file *file)
 
 static const struct file_operations memtype_fops = {
 	.open    = memtype_seq_open,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 };

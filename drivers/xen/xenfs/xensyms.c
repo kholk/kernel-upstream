@@ -146,7 +146,7 @@ static int xensyms_release(struct inode *inode, struct file *file)
 
 const struct file_operations xensyms_ops = {
 	.open = xensyms_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = xensyms_release
 };

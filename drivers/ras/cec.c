@@ -475,7 +475,7 @@ static int array_open(struct inode *inode, struct file *filp)
 static const struct file_operations array_ops = {
 	.owner	 = THIS_MODULE,
 	.open	 = array_open,
-	.read	 = seq_read,
+	.read_iter	 = seq_read_iter,
 	.llseek	 = seq_lseek,
 	.release = single_release,
 };

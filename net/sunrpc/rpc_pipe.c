@@ -449,7 +449,7 @@ rpc_info_release(struct inode *inode, struct file *file)
 static const struct file_operations rpc_info_operations = {
 	.owner		= THIS_MODULE,
 	.open		= rpc_info_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= rpc_info_release,
 };

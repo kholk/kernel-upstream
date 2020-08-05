@@ -51,7 +51,7 @@ static int oct_ilm_open(struct inode *inode, struct file *file)
 
 static const struct file_operations oct_ilm_ops = {
 	.open = oct_ilm_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

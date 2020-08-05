@@ -182,7 +182,7 @@ static int open_file_registers(struct inode *inode, struct file *file)
 
 static const struct file_operations fops_registers = {
 	.open = open_file_registers,
-	.read    = seq_read,
+	.read_iter    = seq_read_iter,
 	.llseek  = seq_lseek,
 	.release = seq_release,
 	.owner = THIS_MODULE,

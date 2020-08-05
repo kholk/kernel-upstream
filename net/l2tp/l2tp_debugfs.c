@@ -320,7 +320,7 @@ static int l2tp_dfs_seq_release(struct inode *inode, struct file *file)
 static const struct file_operations l2tp_dfs_fops = {
 	.owner		= THIS_MODULE,
 	.open		= l2tp_dfs_seq_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= l2tp_dfs_seq_release,
 };

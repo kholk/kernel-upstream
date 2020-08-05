@@ -1891,7 +1891,7 @@ static int _dpu_encoder_init_debugfs(struct drm_encoder *drm_enc)
 
 	static const struct file_operations debugfs_status_fops = {
 		.open =		_dpu_encoder_debugfs_status_open,
-		.read =		seq_read,
+		.read_iter =		seq_read_iter,
 		.llseek =	seq_lseek,
 		.release =	single_release,
 	};

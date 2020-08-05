@@ -66,7 +66,7 @@ static int tpm_bios_measurements_release(struct inode *inode,
 static const struct file_operations tpm_bios_measurements_ops = {
 	.owner = THIS_MODULE,
 	.open = tpm_bios_measurements_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = tpm_bios_measurements_release,
 };

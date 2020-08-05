@@ -8353,7 +8353,7 @@ static __poll_t mdstat_poll(struct file *filp, poll_table *wait)
 
 static const struct proc_ops mdstat_proc_ops = {
 	.proc_open	= md_seq_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,
 	.proc_poll	= mdstat_poll,

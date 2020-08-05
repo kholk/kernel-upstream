@@ -1274,7 +1274,7 @@ static int mipi_dbi_debugfs_command_open(struct inode *inode,
 static const struct file_operations mipi_dbi_debugfs_command_fops = {
 	.owner = THIS_MODULE,
 	.open = mipi_dbi_debugfs_command_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.write = mipi_dbi_debugfs_command_write,

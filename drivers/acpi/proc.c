@@ -136,7 +136,7 @@ acpi_system_wakeup_device_open_fs(struct inode *inode, struct file *file)
 
 static const struct proc_ops acpi_system_wakeup_device_proc_ops = {
 	.proc_open	= acpi_system_wakeup_device_open_fs,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_write	= acpi_system_write_wakeup_device,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= single_release,

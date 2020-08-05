@@ -3284,7 +3284,7 @@ static int ocfs2_dlm_debug_open(struct inode *inode, struct file *file)
 static const struct file_operations ocfs2_dlm_debug_fops = {
 	.open =		ocfs2_dlm_debug_open,
 	.release =	ocfs2_dlm_debug_release,
-	.read =		seq_read,
+	.read_iter =		seq_read_iter,
 	.llseek =	seq_lseek,
 };
 

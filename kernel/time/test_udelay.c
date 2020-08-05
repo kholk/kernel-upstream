@@ -129,7 +129,7 @@ static ssize_t udelay_test_write(struct file *file, const char __user *buf,
 static const struct file_operations udelay_test_debugfs_ops = {
 	.owner = THIS_MODULE,
 	.open = udelay_test_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = udelay_test_write,
 	.llseek = seq_lseek,
 	.release = single_release,

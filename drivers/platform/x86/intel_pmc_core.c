@@ -894,7 +894,7 @@ static int pmc_core_ltr_ignore_open(struct inode *inode, struct file *file)
 
 static const struct file_operations pmc_core_ltr_ignore_ops = {
 	.open           = pmc_core_ltr_ignore_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.write          = pmc_core_ltr_ignore_write,
 	.llseek         = seq_lseek,
 	.release        = single_release,

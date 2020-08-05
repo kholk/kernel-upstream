@@ -19,7 +19,6 @@ const struct file_operations minix_file_operations = {
 	.write_iter	= generic_file_write_iter,
 	.mmap		= generic_file_mmap,
 	.fsync		= generic_file_fsync,
-	.splice_read	= generic_file_splice_read,
 };
 
 static int minix_setattr(struct dentry *dentry, struct iattr *attr)

@@ -349,7 +349,7 @@ snic_stats_open(struct inode *inode, struct file *filp)
 static const struct file_operations snic_stats_fops = {
 	.owner	= THIS_MODULE,
 	.open	= snic_stats_open,
-	.read	= seq_read,
+	.read_iter	= seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -455,7 +455,7 @@ snic_trc_open(struct inode *inode, struct file *filp)
 static const struct file_operations snic_trc_fops = {
 	.owner	= THIS_MODULE,
 	.open	= snic_trc_open,
-	.read	= seq_read,
+	.read_iter	= seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };

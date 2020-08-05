@@ -1342,7 +1342,7 @@ static int pwm_seq_open(struct inode *inode, struct file *file)
 static const struct file_operations pwm_debugfs_ops = {
 	.owner = THIS_MODULE,
 	.open = pwm_seq_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };

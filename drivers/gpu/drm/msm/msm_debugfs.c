@@ -103,7 +103,7 @@ free_priv:
 static const struct file_operations msm_gpu_fops = {
 	.owner = THIS_MODULE,
 	.open = msm_gpu_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = msm_gpu_release,
 };

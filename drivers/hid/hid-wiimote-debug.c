@@ -163,7 +163,7 @@ static ssize_t wiidebug_drm_write(struct file *f, const char __user *u,
 static const struct file_operations wiidebug_drm_fops = {
 	.owner = THIS_MODULE,
 	.open = wiidebug_drm_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.write = wiidebug_drm_write,
 	.release = single_release,

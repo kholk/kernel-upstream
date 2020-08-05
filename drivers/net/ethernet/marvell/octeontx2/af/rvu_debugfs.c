@@ -123,7 +123,7 @@ static int rvu_dbg_open_##name(struct inode *inode, struct file *file) \
 static const struct file_operations rvu_dbg_##name##_fops = { \
 	.owner		= THIS_MODULE, \
 	.open		= rvu_dbg_open_##name, \
-	.read		= seq_read, \
+	.read_iter		= seq_read_iter, \
 	.write		= rvu_dbg_##write_op, \
 	.llseek		= seq_lseek, \
 	.release	= single_release, \

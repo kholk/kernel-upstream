@@ -2503,7 +2503,7 @@ static int asus_wmi_debugfs_open(struct inode *inode, struct file *file)
 static const struct file_operations asus_wmi_debugfs_io_ops = {
 	.owner = THIS_MODULE,
 	.open = asus_wmi_debugfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

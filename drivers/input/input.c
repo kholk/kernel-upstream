@@ -1220,7 +1220,7 @@ static int input_proc_devices_open(struct inode *inode, struct file *file)
 static const struct proc_ops input_devices_proc_ops = {
 	.proc_open	= input_proc_devices_open,
 	.proc_poll	= input_proc_devices_poll,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,
 };
@@ -1282,7 +1282,7 @@ static int input_proc_handlers_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops input_handlers_proc_ops = {
 	.proc_open	= input_proc_handlers_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,
 };

@@ -56,7 +56,7 @@ static int dpaa2_dbg_cpu_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dpaa2_dbg_cpu_ops = {
 	.open = dpaa2_dbg_cpu_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -120,7 +120,7 @@ static int dpaa2_dbg_fqs_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dpaa2_dbg_fq_ops = {
 	.open = dpaa2_dbg_fqs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -165,7 +165,7 @@ static int dpaa2_dbg_ch_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dpaa2_dbg_ch_ops = {
 	.open = dpaa2_dbg_ch_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

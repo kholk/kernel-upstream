@@ -1828,14 +1828,14 @@ static const struct seq_operations show_set_no_pid_seq_ops = {
 
 static const struct file_operations ftrace_avail_fops = {
 	.open = ftrace_event_avail_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };
 
 static const struct file_operations ftrace_set_event_fops = {
 	.open = ftrace_event_set_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = ftrace_event_write,
 	.llseek = seq_lseek,
 	.release = ftrace_event_release,
@@ -1843,7 +1843,7 @@ static const struct file_operations ftrace_set_event_fops = {
 
 static const struct file_operations ftrace_set_event_pid_fops = {
 	.open = ftrace_event_set_pid_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = ftrace_event_pid_write,
 	.llseek = seq_lseek,
 	.release = ftrace_event_release,
@@ -1851,7 +1851,7 @@ static const struct file_operations ftrace_set_event_pid_fops = {
 
 static const struct file_operations ftrace_set_event_notrace_pid_fops = {
 	.open = ftrace_event_set_npid_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.write = ftrace_event_npid_write,
 	.llseek = seq_lseek,
 	.release = ftrace_event_release,
@@ -1866,7 +1866,7 @@ static const struct file_operations ftrace_enable_fops = {
 
 static const struct file_operations ftrace_event_format_fops = {
 	.open = trace_format_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release,
 };

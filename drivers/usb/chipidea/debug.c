@@ -110,7 +110,7 @@ static int ci_port_test_open(struct inode *inode, struct file *file)
 static const struct file_operations ci_port_test_fops = {
 	.open		= ci_port_test_open,
 	.write		= ci_port_test_write,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -296,7 +296,7 @@ static int ci_role_open(struct inode *inode, struct file *file)
 static const struct file_operations ci_role_fops = {
 	.open		= ci_role_open,
 	.write		= ci_role_write,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

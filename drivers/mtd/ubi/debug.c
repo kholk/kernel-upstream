@@ -488,7 +488,7 @@ static int eraseblk_count_release(struct inode *inode, struct file *f)
 static const struct file_operations eraseblk_count_fops = {
 	.owner = THIS_MODULE,
 	.open = eraseblk_count_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = eraseblk_count_release,
 };

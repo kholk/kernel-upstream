@@ -314,7 +314,7 @@ static int sun8i_ce_dbgfs_open(struct inode *inode, struct file *file)
 static const struct file_operations sun8i_ce_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.open = sun8i_ce_dbgfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

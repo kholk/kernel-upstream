@@ -159,7 +159,7 @@ static int exports_proc_open(struct inode *inode, struct file *file)
 
 static const struct proc_ops exports_proc_ops = {
 	.proc_open	= exports_proc_open,
-	.proc_read	= seq_read,
+	.proc_read_iter	= seq_read_iter,
 	.proc_lseek	= seq_lseek,
 	.proc_release	= seq_release,
 };
@@ -171,7 +171,7 @@ static int exports_nfsd_open(struct inode *inode, struct file *file)
 
 static const struct file_operations exports_nfsd_operations = {
 	.open		= exports_nfsd_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
@@ -189,7 +189,7 @@ static int export_features_open(struct inode *inode, struct file *file)
 
 static const struct file_operations export_features_operations = {
 	.open		= export_features_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -208,7 +208,7 @@ static int supported_enctypes_open(struct inode *inode, struct file *file)
 
 static const struct file_operations supported_enctypes_ops = {
 	.open		= supported_enctypes_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -216,14 +216,14 @@ static const struct file_operations supported_enctypes_ops = {
 
 static const struct file_operations pool_stats_operations = {
 	.open		= nfsd_pool_stats_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= nfsd_pool_stats_release,
 };
 
 static const struct file_operations reply_cache_stats_operations = {
 	.open		= nfsd_reply_cache_stats_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

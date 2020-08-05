@@ -163,7 +163,7 @@ static int pci_perf_seq_open(struct inode *inode, struct file *filp)
 
 static const struct file_operations debugfs_pci_perf_fops = {
 	.open	 = pci_perf_seq_open,
-	.read	 = seq_read,
+	.read_iter	 = seq_read_iter,
 	.write	 = pci_perf_seq_write,
 	.llseek  = seq_lseek,
 	.release = single_release,

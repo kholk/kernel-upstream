@@ -1155,7 +1155,7 @@ static int saa7164_open(struct inode *inode, struct file *file)
 static const struct file_operations saa7164_operations = {
 	.owner          = THIS_MODULE,
 	.open           = saa7164_open,
-	.read           = seq_read,
+	.read_iter           = seq_read_iter,
 	.llseek         = seq_lseek,
 	.release        = seq_release,
 };

@@ -4724,7 +4724,7 @@ static int event_hist_open(struct inode *inode, struct file *file)
 
 const struct file_operations event_hist_fops = {
 	.open = event_hist_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -4996,7 +4996,7 @@ static int event_hist_debug_open(struct inode *inode, struct file *file)
 
 const struct file_operations event_hist_debug_fops = {
 	.open = event_hist_debug_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };

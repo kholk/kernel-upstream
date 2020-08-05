@@ -912,7 +912,7 @@ static int dss_debug_open(struct inode *inode, struct file *file)
 
 static const struct file_operations dss_debug_fops = {
 	.open		= dss_debug_open,
-	.read		= seq_read,
+	.read_iter		= seq_read_iter,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };

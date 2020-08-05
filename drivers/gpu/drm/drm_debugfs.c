@@ -154,7 +154,7 @@ static int drm_debugfs_open(struct inode *inode, struct file *file)
 static const struct file_operations drm_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.open = drm_debugfs_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -397,7 +397,7 @@ DEFINE_SHOW_ATTRIBUTE(vrr_range);
 static const struct file_operations drm_edid_fops = {
 	.owner = THIS_MODULE,
 	.open = edid_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.write = edid_write
@@ -407,7 +407,7 @@ static const struct file_operations drm_edid_fops = {
 static const struct file_operations drm_connector_fops = {
 	.owner = THIS_MODULE,
 	.open = connector_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = single_release,
 	.write = connector_write

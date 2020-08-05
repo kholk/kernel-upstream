@@ -98,7 +98,7 @@ static int adf_ring_open(struct inode *inode, struct file *file)
 
 static const struct file_operations adf_ring_debug_fops = {
 	.open = adf_ring_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release
 };
@@ -209,7 +209,7 @@ static int adf_bank_open(struct inode *inode, struct file *file)
 
 static const struct file_operations adf_bank_debug_fops = {
 	.open = adf_bank_open,
-	.read = seq_read,
+	.read_iter = seq_read_iter,
 	.llseek = seq_lseek,
 	.release = seq_release
 };
