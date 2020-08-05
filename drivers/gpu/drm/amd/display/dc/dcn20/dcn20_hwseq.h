@@ -131,6 +131,18 @@ void dcn20_dccg_init(struct dce_hwseq *hws);
 int dcn20_init_sys_ctx(struct dce_hwseq *hws,
 		struct dc *dc,
 		struct dc_phy_addr_space_config *pa_config);
+bool dcn20_disconnect_pipes(
+		struct dc *dc,
+		struct dc_state *context);
 
+void dcn20_wait_for_pending_cleared(struct dc *dc,
+		struct dc_state *context);
+                
+
+#ifndef TRIM_FSFT
+bool dcn20_optimize_timing_for_fsft(struct dc *dc,
+		struct dc_crtc_timing *timing,
+		unsigned int max_input_rate_in_khz);
+#endif
 #endif /* __DC_HWSS_DCN20_H__ */
 

@@ -579,12 +579,18 @@ static int smu_smc_table_sw_init(struct smu_context *smu)
 	if (ret)
 		return ret;
 
+	ret = smu_i2c_init(smu, &smu->adev->pm.smu_i2c);
+	if (ret)
+		return ret;
+
 	return 0;
 }
 
 static int smu_smc_table_sw_fini(struct smu_context *smu)
 {
 	int ret;
+
+	smu_i2c_fini(smu, &smu->adev->pm.smu_i2c);
 
 	ret = smu_free_memory_pool(smu);
 	if (ret)
@@ -639,6 +645,7 @@ static int smu_sw_init(void *handle)
 	mutex_init(&smu->message_lock);
 
 	INIT_WORK(&smu->throttling_logging_work, smu_throttling_logging_work_fn);
+	atomic64_set(&smu->throttle_int_counter, 0);
 	smu->watermarks_bitmap = 0;
 	smu->power_profile_mode = PP_SMC_POWER_PROFILE_BOOTUP_DEFAULT;
 	smu->default_power_profile_mode = PP_SMC_POWER_PROFILE_BOOTUP_DEFAULT;
@@ -734,7 +741,7 @@ static int smu_smc_hw_setup(struct smu_context *smu)
 	uint32_t pcie_gen = 0, pcie_width = 0;
 	int ret;
 
-	if (smu_is_dpm_running(smu) && adev->in_suspend) {
+	if (adev->in_suspend && smu_is_dpm_running(smu)) {
 		dev_info(adev->dev, "dpm has been enabled\n");
 		return 0;
 	}
@@ -843,10 +850,6 @@ static int smu_smc_hw_setup(struct smu_context *smu)
 		dev_err(adev->dev, "Failed to enable thermal alert!\n");
 		return ret;
 	}
-
-	ret = smu_i2c_init(smu, &adev->pm.smu_i2c);
-	if (ret)
-		return ret;
 
 	ret = smu_disable_umc_cdr_12gbps_workaround(smu);
 	if (ret) {
@@ -991,7 +994,7 @@ static int smu_disable_dpms(struct smu_context *smu)
 	struct amdgpu_device *adev = smu->adev;
 	int ret = 0;
 	bool use_baco = !smu->is_apu &&
-		((adev->in_gpu_reset &&
+		((amdgpu_in_reset(adev) &&
 		  (amdgpu_asic_reset_method(adev) == AMD_RESET_METHOD_BACO)) ||
 		 ((adev->in_runpm || adev->in_hibernate) && amdgpu_asic_supports_baco(adev)));
 
@@ -1045,8 +1048,6 @@ static int smu_smc_hw_cleanup(struct smu_context *smu)
 {
 	struct amdgpu_device *adev = smu->adev;
 	int ret = 0;
-
-	smu_i2c_fini(smu, &adev->pm.smu_i2c);
 
 	cancel_work_sync(&smu->throttling_logging_work);
 
@@ -1590,6 +1591,9 @@ int smu_set_mp1_state(struct smu_context *smu,
 	}
 
 	ret = smu_send_smc_msg(smu, msg, NULL);
+	/* some asics may not support those messages */
+	if (ret == -EINVAL)
+		ret = 0;
 	if (ret)
 		dev_err(smu->adev->dev, "[PrepareMp1] Failed!\n");
 
@@ -1944,6 +1948,10 @@ int smu_read_sensor(struct smu_context *smu,
 
 	mutex_lock(&smu->mutex);
 
+	if (smu->ppt_funcs->read_sensor)
+		if (!smu->ppt_funcs->read_sensor(smu, sensor, data, size))
+			goto unlock;
+
 	switch (sensor) {
 	case AMDGPU_PP_SENSOR_STABLE_PSTATE_SCLK:
 		*((uint32_t *)data) = pstate_table->gfxclk_pstate.standard * 100;
@@ -1974,11 +1982,12 @@ int smu_read_sensor(struct smu_context *smu,
 		*size = 4;
 		break;
 	default:
-		if (smu->ppt_funcs->read_sensor)
-			ret = smu->ppt_funcs->read_sensor(smu, sensor, data, size);
+		*size = 0;
+		ret = -EOPNOTSUPP;
 		break;
 	}
 
+unlock:
 	mutex_unlock(&smu->mutex);
 
 	return ret;

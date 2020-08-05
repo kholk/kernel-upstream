@@ -26,6 +26,7 @@
 #include "dce110/dce110_hw_sequencer.h"
 #include "dcn10/dcn10_hw_sequencer.h"
 #include "dcn20/dcn20_hwseq.h"
+#include "dcn21/dcn21_hwseq.h"
 #include "dcn30_hwseq.h"
 
 static const struct hw_sequencer_funcs dcn30_funcs = {
@@ -34,6 +35,8 @@ static const struct hw_sequencer_funcs dcn30_funcs = {
 	.apply_ctx_to_hw = dce110_apply_ctx_to_hw,
 	.apply_ctx_for_surface = NULL,
 	.program_front_end_for_ctx = dcn20_program_front_end_for_ctx,
+	.disconnect_pipes = dcn20_disconnect_pipes,
+	.wait_for_pending_cleared = dcn20_wait_for_pending_cleared,
 	.post_unlock_program_front_end = dcn20_post_unlock_program_front_end,
 	.update_plane_addr = dcn20_update_plane_addr,
 	.update_dchub = dcn10_update_dchub,
@@ -87,8 +90,8 @@ static const struct hw_sequencer_funcs dcn30_funcs = {
 	.set_flip_control_gsl = dcn20_set_flip_control_gsl,
 	.get_vupdate_offset_from_vsync = dcn10_get_vupdate_offset_from_vsync,
 	.apply_idle_power_optimizations = dcn30_apply_idle_power_optimizations,
-	.set_backlight_level = dce110_set_backlight_level,
-	.set_abm_immediate_disable = dce110_set_abm_immediate_disable,
+	.set_backlight_level = dcn21_set_backlight_level,
+	.set_abm_immediate_disable = dcn21_set_abm_immediate_disable,
 };
 
 static const struct hwseq_private_funcs dcn30_private_funcs = {

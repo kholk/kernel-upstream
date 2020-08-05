@@ -35,6 +35,8 @@ static const struct hw_sequencer_funcs dcn21_funcs = {
 	.apply_ctx_to_hw = dce110_apply_ctx_to_hw,
 	.apply_ctx_for_surface = NULL,
 	.program_front_end_for_ctx = dcn20_program_front_end_for_ctx,
+	.disconnect_pipes = dcn20_disconnect_pipes,
+	.wait_for_pending_cleared = dcn20_wait_for_pending_cleared,
 	.post_unlock_program_front_end = dcn20_post_unlock_program_front_end,
 	.update_plane_addr = dcn20_update_plane_addr,
 	.update_dchub = dcn10_update_dchub,
@@ -92,6 +94,9 @@ static const struct hw_sequencer_funcs dcn21_funcs = {
 	.set_backlight_level = dcn21_set_backlight_level,
 	.set_abm_immediate_disable = dcn21_set_abm_immediate_disable,
 	.set_pipe = dcn21_set_pipe,
+#ifndef TRIM_FSFT
+	.optimize_timing_for_fsft = dcn20_optimize_timing_for_fsft,
+#endif
 };
 
 static const struct hwseq_private_funcs dcn21_private_funcs = {
