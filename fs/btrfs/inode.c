@@ -653,12 +653,18 @@ cont:
 						     page_error_op |
 						     PAGE_END_WRITEBACK);
 
-			for (i = 0; i < nr_pages; i++) {
-				WARN_ON(pages[i]->mapping);
-				put_page(pages[i]);
+			/*
+			 * Ensure we only free the compressed pages if we have
+			 * them allocated, as we can still reach here with
+			 * inode_need_compress() == false.
+			 */
+			if (pages) {
+				for (i = 0; i < nr_pages; i++) {
+					WARN_ON(pages[i]->mapping);
+					put_page(pages[i]);
+				}
+				kfree(pages);
 			}
-			kfree(pages);
-
 			return 0;
 		}
 	}
@@ -2154,11 +2160,8 @@ static blk_status_t btrfs_submit_bio_start(void *private_data, struct bio *bio,
 				    u64 bio_offset)
 {
 	struct inode *inode = private_data;
-	blk_status_t ret = 0;
 
-	ret = btrfs_csum_one_bio(BTRFS_I(inode), bio, 0, 0);
-	BUG_ON(ret); /* -ENOMEM */
-	return 0;
+	return btrfs_csum_one_bio(BTRFS_I(inode), bio, 0, 0);
 }
 
 /*
@@ -7612,10 +7615,8 @@ static blk_status_t btrfs_submit_bio_start_direct_io(void *private_data,
 				    struct bio *bio, u64 offset)
 {
 	struct inode *inode = private_data;
-	blk_status_t ret;
-	ret = btrfs_csum_one_bio(BTRFS_I(inode), bio, offset, 1);
-	BUG_ON(ret); /* -ENOMEM */
-	return 0;
+
+	return btrfs_csum_one_bio(BTRFS_I(inode), bio, offset, 1);
 }
 
 static void btrfs_end_dio_bio(struct bio *bio)
