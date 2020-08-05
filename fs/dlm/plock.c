@@ -153,6 +153,26 @@ int dlm_posix_lock(dlm_lockspace_t *lockspace, u64 number, struct file *file,
 			do_unlock_close(ls, number, file, fl);
 			goto out;
 		}
+
+		/* due backward compatible we do this
+		 * behaviour only if enabled
+		 */
+		if (dlm_config.ci_waitplock_recovery) {
+			/* wait for recovery if recovery is running */
+			rv = wait_event_interruptible(ls->ls_posix_lock_wait,
+						      !test_bit(LSFL_RECOVER_LOCK,
+								&ls->ls_flags));
+			if (rv == -ERESTARTSYS) {
+				log_debug(ls, "%s: wait for recovery killed %llx",
+					  __func__, (unsigned long long)number);
+				spin_lock(&ops_lock);
+				list_del(&op->list);
+				spin_unlock(&ops_lock);
+				kfree(xop);
+				do_unlock_close(ls, number, file, fl);
+				goto out;
+			}
+		}
 	} else {
 		rv = FILE_LOCK_DEFERRED;
 		goto out;
