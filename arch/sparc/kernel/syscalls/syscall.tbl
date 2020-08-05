@@ -300,7 +300,7 @@
 249	64	nanosleep		sys_nanosleep
 250	32	mremap			sys_mremap
 250	64	mremap			sys_64_mremap
-251	common	_sysctl			sys_sysctl			compat_sys_sysctl
+251	common	_sysctl			sys_ni_syscall
 252	common	getsid			sys_getsid
 253	common	fdatasync		sys_fdatasync
 254	32	nfsservctl		sys_ni_syscall			sys_nis_syscall
@@ -487,3 +487,4 @@
 439	common	faccessat2			sys_faccessat2
 440	common	watch_mount			sys_watch_mount
 441	common	fsinfo				sys_fsinfo
+442	common	process_madvise			sys_process_madvise		compat_sys_process_madvise
