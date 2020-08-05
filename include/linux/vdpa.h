@@ -33,12 +33,14 @@ struct vdpa_notification_area {
  * @dma_dev: the actual device that is performing DMA
  * @config: the configuration ops for this device.
  * @index: device index
+ * @features_valid: were features initialized? for legacy guests
  */
 struct vdpa_device {
 	struct device dev;
 	struct device *dma_dev;
 	const struct vdpa_config_ops *config;
 	unsigned int index;
+	bool features_valid;
 };
 
 /**
@@ -87,6 +89,11 @@ struct vdpa_device {
  *				@vdev: vdpa device
  *				@idx: virtqueue index
  *				Returns the notifcation area
+ * @get_vq_irq:			Get the irq number of a virtqueue
+ *				@vdev: vdpa device
+ *				@idx: virtqueue index
+ *				Returns int: irq number of a virtqueue,
+ *				negative number if no irq assigned.
  * @get_vq_align:		Get the virtqueue align requirement
  *				for the device
  *				@vdev: vdpa device
@@ -178,6 +185,7 @@ struct vdpa_config_ops {
 	u64 (*get_vq_state)(struct vdpa_device *vdev, u16 idx);
 	struct vdpa_notification_area
 	(*get_vq_notification)(struct vdpa_device *vdev, u16 idx);
+	int (*get_vq_irq)(struct vdpa_device *vdv, u16 idx);
 
 	/* Device ops */
 	u32 (*get_vq_align)(struct vdpa_device *vdev);
@@ -266,4 +274,36 @@ static inline struct device *vdpa_get_dma_dev(struct vdpa_device *vdev)
 {
 	return vdev->dma_dev;
 }
+
+static inline void vdpa_reset(struct vdpa_device *vdev)
+{
+        const struct vdpa_config_ops *ops = vdev->config;
+
+	vdev->features_valid = false;
+        ops->set_status(vdev, 0);
+}
+
+static inline int vdpa_set_features(struct vdpa_device *vdev, u64 features)
+{
+        const struct vdpa_config_ops *ops = vdev->config;
+
+	vdev->features_valid = true;
+        return ops->set_features(vdev, features);
+}
+
+
+static inline void vdpa_get_config(struct vdpa_device *vdev, unsigned offset,
+				   void *buf, unsigned int len)
+{
+        const struct vdpa_config_ops *ops = vdev->config;
+
+	/*
+	 * Config accesses aren't supposed to trigger before features are set.
+	 * If it does happen we assume a legacy guest.
+	 */
+	if (!vdev->features_valid)
+		vdpa_set_features(vdev, 0);
+	ops->get_config(vdev, offset, buf, len);
+}
+
 #endif /* _LINUX_VDPA_H */
