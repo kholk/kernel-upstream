@@ -421,22 +421,21 @@ void __init bootmem_init(void)
 	arm64_numa_init();
 
 	/*
-	 * must be done after arm64_numa_init() which calls numa_init() to
-	 * initialize node_online_map that gets used in hugetlb_cma_reserve()
-	 * while allocating required CMA size across online nodes.
+	 * sparse_init() tries to allocate memory from memblock, so must be
+	 * done after the fixed reservations
+	 */
+	sparse_init();
+	zone_sizes_init(min, max);
+
+	/*
+	 * must be done after zone_sizes_init() which calls free_area_init()
+	 * that calls node_set_state() to initialize node_states[N_MEMORY]
+	 * because hugetlb_cma_reserve() will scan over nodes with N_MEMORY
+	 * state
 	 */
 #if defined(CONFIG_HUGETLB_PAGE) && defined(CONFIG_CMA)
 	arm64_hugetlb_cma_reserve();
 #endif
-
-	/*
-	 * Sparsemem tries to allocate bootmem in memory_present(), so must be
-	 * done after the fixed reservations.
-	 */
-	memblocks_present();
-
-	sparse_init();
-	zone_sizes_init(min, max);
 
 	memblock_dump_all();
 }

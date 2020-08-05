@@ -119,6 +119,21 @@ all zones are compacted such that free memory is available in contiguous
 blocks where possible. This can be important for example in the allocation of
 huge pages although processes will also directly compact memory as required.
 
+compaction_proactiveness
+========================
+
+This tunable takes a value in the range [0, 100] with a default value of
+20. This tunable determines how aggressively compaction is done in the
+background. Setting it to 0 disables proactive compaction.
+
+Note that compaction has a non-trivial system-wide impact as pages
+belonging to different processes are moved around, which could also lead
+to latency spikes in unsuspecting applications. The kernel employs
+various heuristics to avoid wasting CPU cycles if it detects that
+proactive compaction is not being effective.
+
+Be careful when setting it to extreme values like 100, as that may
+cause excessive background compaction activity.
 
 compact_unevictable_allowed
 ===========================
@@ -807,8 +822,8 @@ e.g. cat /proc/sys/vm/stat_refresh /proc/meminfo
 
 As a side-effect, it also checks for negative totals (elsewhere reported
 as 0) and "fails" with EINVAL if any are found, with a warning in dmesg.
-(At time of writing, a few stats are known sometimes to be found negative,
-with no ill effects: errors and warnings on these stats are suppressed.)
+(On a SMP machine some stats can temporarily become negative, with no ill
+effects: errors and warnings on these stats are suppressed.)
 
 
 numa_stat

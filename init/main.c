@@ -830,7 +830,7 @@ void __init __weak arch_call_rest_init(void)
 	rest_init();
 }
 
-asmlinkage __visible void __init start_kernel(void)
+asmlinkage __visible __no_sanitize_address void __init start_kernel(void)
 {
 	char *command_line;
 	char *after_dashes;

@@ -525,9 +525,9 @@ static int aio_setup_ring(struct kioctx *ctx, unsigned int nr_events)
 		return -EINTR;
 	}
 
-	ctx->mmap_base = do_mmap_pgoff(ctx->aio_ring_file, 0, ctx->mmap_size,
-				       PROT_READ | PROT_WRITE,
-				       MAP_SHARED, 0, &unused, NULL);
+	ctx->mmap_base = do_mmap(ctx->aio_ring_file, 0, ctx->mmap_size,
+				 PROT_READ | PROT_WRITE,
+				 MAP_SHARED, 0, &unused, NULL);
 	mmap_write_unlock(mm);
 	if (IS_ERR((void *)ctx->mmap_base)) {
 		ctx->mmap_size = 0;
@@ -1287,12 +1287,9 @@ static long read_events(struct kioctx *ctx, long min_nr, long nr,
 	 * the ringbuffer empty. So in practice we should be ok, but it's
 	 * something to be aware of when touching this code.
 	 */
-	if (until == 0)
-		aio_read_events(ctx, min_nr, nr, event, &ret);
-	else
-		wait_event_interruptible_hrtimeout(ctx->wait,
-				aio_read_events(ctx, min_nr, nr, event, &ret),
-				until);
+	wait_event_interruptible_hrtimeout(ctx->wait,
+			aio_read_events(ctx, min_nr, nr, event, &ret),
+			until);
 	return ret;
 }
 
