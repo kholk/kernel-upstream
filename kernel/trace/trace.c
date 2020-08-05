@@ -2002,7 +2002,6 @@ static void tracing_reset_cpu(struct array_buffer *buf, int cpu)
 void tracing_reset_online_cpus(struct array_buffer *buf)
 {
 	struct trace_buffer *buffer = buf->buffer;
-	int cpu;
 
 	if (!buffer)
 		return;
@@ -2014,8 +2013,7 @@ void tracing_reset_online_cpus(struct array_buffer *buf)
 
 	buf->time_start = buffer_ftrace_now(buf, buf->cpu);
 
-	for_each_online_cpu(cpu)
-		ring_buffer_reset_cpu(buffer, cpu);
+	ring_buffer_reset_online_cpus(buffer);
 
 	ring_buffer_record_enable(buffer);
 }
@@ -2931,12 +2929,6 @@ static void __ftrace_trace_stack(struct trace_buffer *buffer,
 		skip++;
 #endif
 
-	/*
-	 * Since events can happen in NMIs there's no safe way to
-	 * use the per cpu ftrace_stacks. We reserve it and if an interrupt
-	 * or NMI comes in, it will just have to use the default
-	 * FTRACE_STACK_SIZE.
-	 */
 	preempt_disable_notrace();
 
 	stackidx = __this_cpu_inc_return(ftrace_stack_reserve) - 1;
@@ -3345,11 +3337,15 @@ int trace_array_printk(struct trace_array *tr,
 	int ret;
 	va_list ap;
 
-	if (!(global_trace.trace_flags & TRACE_ITER_PRINTK))
-		return 0;
-
 	if (!tr)
 		return -ENOENT;
+
+	/* This is only allowed for created instances */
+	if (tr == &global_trace)
+		return 0;
+
+	if (!(tr->trace_flags & TRACE_ITER_PRINTK))
+		return 0;
 
 	va_start(ap, fmt);
 	ret = trace_array_vprintk(tr, ip, fmt, ap);
@@ -5886,7 +5882,7 @@ int tracing_set_tracer(struct trace_array *tr, const char *buf)
 	}
 
 	/* If trace pipe files are being read, we can't change the tracer */
-	if (tr->current_trace->ref) {
+	if (tr->trace_ref) {
 		ret = -EBUSY;
 		goto out;
 	}
@@ -6102,7 +6098,7 @@ static int tracing_open_pipe(struct inode *inode, struct file *filp)
 
 	nonseekable_open(inode, filp);
 
-	tr->current_trace->ref++;
+	tr->trace_ref++;
 out:
 	mutex_unlock(&trace_types_lock);
 	return ret;
@@ -6121,7 +6117,7 @@ static int tracing_release_pipe(struct inode *inode, struct file *file)
 
 	mutex_lock(&trace_types_lock);
 
-	tr->current_trace->ref--;
+	tr->trace_ref--;
 
 	if (iter->trace->pipe_close)
 		iter->trace->pipe_close(iter);
@@ -7405,7 +7401,7 @@ static int tracing_buffers_open(struct inode *inode, struct file *filp)
 	if (ret)
 		return ret;
 
-	info = kzalloc(sizeof(*info), GFP_KERNEL);
+	info = kvzalloc(sizeof(*info), GFP_KERNEL);
 	if (!info) {
 		trace_array_put(tr);
 		return -ENOMEM;
@@ -7423,7 +7419,7 @@ static int tracing_buffers_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = info;
 
-	tr->current_trace->ref++;
+	tr->trace_ref++;
 
 	mutex_unlock(&trace_types_lock);
 
@@ -7524,14 +7520,14 @@ static int tracing_buffers_release(struct inode *inode, struct file *file)
 
 	mutex_lock(&trace_types_lock);
 
-	iter->tr->current_trace->ref--;
+	iter->tr->trace_ref--;
 
 	__trace_array_put(iter->tr);
 
 	if (info->spare)
 		ring_buffer_free_read_page(iter->array_buffer->buffer,
 					   info->spare_cpu, info->spare);
-	kfree(info);
+	kvfree(info);
 
 	mutex_unlock(&trace_types_lock);
 
@@ -8732,7 +8728,7 @@ static int __remove_instance(struct trace_array *tr)
 	int i;
 
 	/* Reference counter for a newly created trace array = 1. */
-	if (tr->ref > 1 || (tr->current_trace && tr->current_trace->ref))
+	if (tr->ref > 1 || (tr->current_trace && tr->trace_ref))
 		return -EBUSY;
 
 	list_del(&tr->list);
