@@ -344,7 +344,7 @@ static int read_afu_info(struct pci_dev *dev, struct ocxl_fn_config *fn,
 }
 
 /**
- * read_template_version() - Read the template version from the AFU
+ * read_template_version - Read the template version from the AFU
  * @dev: the device for the AFU
  * @fn: the AFU offsets
  * @len: outputs the template length
@@ -547,7 +547,7 @@ static int validate_afu(struct pci_dev *dev, struct ocxl_afu_config *afu)
 }
 
 /**
- * read_afu_lpc_memory_info() - Populate AFU metadata regarding LPC memory
+ * read_afu_lpc_memory_info - Populate AFU metadata regarding LPC memory
  * @dev: the device for the AFU
  * @fn: the AFU offsets
  * @afu: the AFU struct to populate the LPC metadata into
