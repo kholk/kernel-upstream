@@ -31,6 +31,10 @@
 		reg = <0x3 SPMI_USID>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		pm660l_spmi_regulators: pm660l-regulators {
+			compatible = "qcom,pm660l-regulators";
+		};
 	};
 };
 
